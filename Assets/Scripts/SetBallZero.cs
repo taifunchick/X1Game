@@ -16,7 +16,7 @@ public class SetBallZero : NetworkBehaviour
                 if (_ball != null )
                 {
                     _ball.transform.position = _ballPosition;
-                    _ball.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    _ball.GetComponent<Rigidbody>().linearVelocity = Vector3.zero;
                     _ball.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
                 }
             }

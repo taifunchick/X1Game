@@ -1,4 +1,4 @@
-using Asynkrone.UnityTelegramGame.Networking;
+//using Asynkrone.UnityTelegramGame.Networking;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public class ScoreManager : MonoBehaviour
 {
     [SerializeField] private Text scoreText;
-    [SerializeField] private ConnexionManager telegramConnexionManager;
+   // [SerializeField] private ConnexionManager telegramConnexionManager;
 
     [SerializeField] private int score;
 
@@ -22,6 +22,6 @@ public class ScoreManager : MonoBehaviour
     }
     public void OnClickShareScore()
     {
-        telegramConnexionManager.SendScore(score);
+     //   telegramConnexionManager.SendScore(score);
     }
 }

@@ -2,7 +2,7 @@
 using UnityEngine;
 using Mirror;
 
-public class ColorChanger : NetworkBehaviour   //Вешается на персонажа с коллайдером в материал указывается с цветом тела
+public class ColorChanger : NetworkBehaviour   // colour sync
 {
     [SerializeField] private Renderer _rend;
     [SyncVar] [SerializeField] private Color _color;
@@ -32,5 +32,16 @@ public class ColorChanger : NetworkBehaviour   //Вешается на персонажа с коллайд
     private void SetRender()
     {
         _rend.material.color = _color;
+    }
+
+    [Command]
+    private void CmdSetColor(Color color)
+    {
+        SetColor(color);
+    }
+
+    public void SetColorByClient(Color color)
+    {
+        CmdSetColor(color);
     }
 }
