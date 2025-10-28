@@ -335,7 +335,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 41230619}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6442dc8070ceb41f094e44de0bf87274, type: 3}
   m_Name: 
@@ -367,9 +367,9 @@ MonoBehaviour:
   port: 27777
   batchSend: 1
   waitBeforeSend: 1
-  clientUseWss: 0
+  clientUseWss: 1
   clientWebsocketSettings:
-    ClientPortOption: 0
+    ClientPortOption: 2
     CustomClientPort: 443
   minimumLogLevel: 1
 --- !u!1 &92014594

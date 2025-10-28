@@ -23,14 +23,14 @@ public class RoboActivate : NetworkBehaviour
     private void CmdSpawnRobot(string name)
     {
         _name = name;
-        GameObject robo = Instantiate(_robotPrefab); 
-        NetworkServer.Spawn(robo); 
+        // GameObject robo = Instantiate(_robotPrefab); 
+        // NetworkServer.Spawn(robo); 
+                                                                //UNCOMMENT ALL TO SPAVN ROBOT
+        // robo.GetComponent<PlayerName>().enabled = true;  
 
-        robo.GetComponent<PlayerName>().enabled = true;
+        // robo.GetComponent<PlayerName>().Name = name;
 
-        robo.GetComponent<PlayerName>().Name = name;
-
-        Debug.Log("Spawn New Robot, with name: " + name);
+        // Debug.Log("Spawn New Robot, with name: " + name);
     }
 
     private void OnDestroy()
