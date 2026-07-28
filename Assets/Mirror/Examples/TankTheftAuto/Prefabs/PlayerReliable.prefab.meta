@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c836760523a549b4fa59f68e0f899ef2
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 129321
+  packageName: Mirror
+  packageVersion: 96.0.1
+  assetPath: Assets/Mirror/Examples/TankTheftAuto/Prefabs/PlayerReliable.prefab
+  uploadId: 736421

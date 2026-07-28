@@ -645,6 +645,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1198,6 +1199,7 @@ GameObject:
   - component: {fileID: 1720445501765984654}
   - component: {fileID: 4374525017467745610}
   - component: {fileID: -3126248327370059846}
+  - component: {fileID: -4945568488151638897}
   m_Layer: 8
   m_Name: PlayerArmature
   m_TagString: Player
@@ -1482,13 +1484,12 @@ MonoBehaviour:
   interpolateRotation: 1
   interpolateScale: 1
   coordinateSpace: 0
-  sendIntervalMultiplier: 1
   timelineOffset: 0
   showGizmos: 0
   showOverlay: 0
   overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
   bufferResetMultiplier: 3
-  changedDetection: 1
+  useFixedUpdate: 0
   positionSensitivity: 0.01
   rotationSensitivity: 0.01
   scaleSensitivity: 0.01
@@ -1598,6 +1599,29 @@ MonoBehaviour:
   syncInterval: 0
   _robotPrefab: {fileID: 6530326518842483545, guid: 82d6d7dd63cf942408dc248b5604642f, type: 3}
   _name: 
+--- !u!114 &-4945568488151638897
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4416926081852918481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60123456789abcdefabcd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Lasertag
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  team: 
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  _shotPrefab: {fileID: 0}
+  _shotSpeed: 40
+  _shotDuration: 1.5
+  _shotScale: 0.2
 --- !u!1 &4523139366846529165
 GameObject:
   m_ObjectHideFlags: 0
@@ -2607,6 +2631,7 @@ SkinnedMeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
   m_UpdateWhenOffscreen: 0
@@ -2985,6 +3010,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0

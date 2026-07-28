@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ec5ef7a355f1eba4ebb586364276cc40
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 129321
+  packageName: Mirror
+  packageVersion: 96.0.1
+  assetPath: Assets/Mirror/Examples/_Common/Projectiles/TankProjectile/TankProjectile.mat
+  uploadId: 736421

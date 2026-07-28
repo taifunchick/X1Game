@@ -2,7 +2,7 @@ using UnityEngine;
 using Mirror;
 using TMPro;
 
-public class NameOnPerson : NetworkBehaviour        // синх и вывод имени на перса вешается на канвас имени на пересе
+public class NameOnPerson : NetworkBehaviour        // СЃРёРЅС… Рё РІС‹РІРѕРґ РёРјРµРЅРё РЅР° РїРµСЂСЃР° РІРµС€Р°РµС‚СЃСЏ РЅР° РєР°РЅРІР°СЃ РёРјРµРЅРё РЅР° РїРµСЂРµСЃРµ
 {
 
     [SyncVar(hook = nameof(OnNameChanged))] private string _name = "";

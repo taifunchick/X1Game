@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8cf1867f10aeae646b60732e463e193b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 129321
+  packageName: Mirror
+  packageVersion: 96.0.1
+  assetPath: Assets/Mirror/Examples/MultipleAdditiveScenes/Prefabs/Reward.prefab
+  uploadId: 736421

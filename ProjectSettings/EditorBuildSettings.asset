@@ -9,8 +9,10 @@ EditorBuildSettings:
     path: Assets/StarterAssets/ThirdPersonController/Scenes/Menu.unity
     guid: 1c4286ac8cf2e9e4f9ce1e59005d5ec3
   - enabled: 1
-    path: Assets/StarterAssets/ThirdPersonController/Scenes/Playground.unity
+    path: Assets/StarterAssets/ThirdPersonController/Scenes/Football.unity
     guid: e9017d5f96b9f09489b4b37e1d6eb914
+  - enabled: 1
+    path: Assets/StarterAssets/ThirdPersonController/Scenes/Lasertag.unity
+    guid: de581190da3b70b41b854e3663e173f5
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 9e7be553448fa2546aea5752021cbcf7, type: 2}
-  m_UseUCBPForAssetBundles: 0
