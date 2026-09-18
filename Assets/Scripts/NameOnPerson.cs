@@ -36,7 +36,9 @@ public class NameOnPerson : NetworkBehaviour        // синх и вывод и
     {
         if (isLocalPlayer)
         {
-            string playerName = PlayerPrefs.GetString("name");
+string playerName = PlayerPrefs.GetString("name", "Player");
+            if (MaxAuthenticators.Instance != null && !string.IsNullOrWhiteSpace(MaxAuthenticators.Instance.playerName))
+                playerName = MaxAuthenticators.Instance.playerName;
             CmdSetName(playerName);
         }
     }
