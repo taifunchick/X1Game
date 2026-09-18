@@ -1,4 +1,4 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -62,8 +62,10 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private void Start()
         {
-            //Get Player Character.
-            playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();       
+            // Prefer the character on this player so remotes do not rotate the local pawn.
+            playerCharacter = GetComponentInParent<CharacterBehaviour>();
+            if (playerCharacter == null)
+                playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
             
             //Cache the character's initial rotation.
             rotationCharacter = playerCharacter.transform.localRotation;

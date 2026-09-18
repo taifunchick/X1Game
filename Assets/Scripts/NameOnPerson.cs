@@ -15,6 +15,13 @@ public class NameOnPerson : NetworkBehaviour        // синх и вывод и
         SetName(_name);
     }
 
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        if (_nameText != null && _nameText.transform.parent != null)
+            _nameText.transform.parent.gameObject.SetActive(false);
+    }
+
     public void SetName(string newName)
     {
         _name = newName;

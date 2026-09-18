@@ -1,4 +1,4 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -209,10 +209,13 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Cache the game mode service. We only need this right here, but we'll cache it in case we ever need it again.
             gameModeService = ServiceLocator.Current.Get<IGameModeService>();
-            //Cache the player character.
-            characterBehaviour = gameModeService.GetPlayerCharacter();
+            // Prefer the owning character so each weapon fires from its own camera.
+            characterBehaviour = GetComponentInParent<CharacterBehaviour>();
+            if (characterBehaviour == null)
+                characterBehaviour = gameModeService.GetPlayerCharacter();
             //Cache the world camera. We use this in line traces.
-            playerCamera = characterBehaviour.GetCameraWorld().transform;
+            if (characterBehaviour != null && characterBehaviour.GetCameraWorld() != null)
+                playerCamera = characterBehaviour.GetCameraWorld().transform;
         }
         protected override void Start()
         {

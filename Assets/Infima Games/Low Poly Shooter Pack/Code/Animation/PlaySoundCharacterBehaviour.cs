@@ -1,4 +1,4 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -74,8 +74,10 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            //We need to get the character component.
-            playerCharacter ??= ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
+            // Prefer the character that owns this animator.
+            playerCharacter ??= animator.GetComponentInParent<CharacterBehaviour>();
+            if (playerCharacter == null)
+                playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
 
             //Get Inventory.
             playerInventory ??= playerCharacter.GetInventory();

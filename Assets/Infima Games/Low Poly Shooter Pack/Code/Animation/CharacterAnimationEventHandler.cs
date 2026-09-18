@@ -1,4 +1,4 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -22,8 +22,10 @@ namespace InfimaGames.LowPolyShooterPack
 
 		private void Awake()
 		{
-			//Grab a reference to the character component.
-			playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
+			//Grab a reference to the character on this player, not whichever pawn spawned first.
+			playerCharacter = GetComponentInParent<CharacterBehaviour>();
+			if (playerCharacter == null)
+				playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
 		}
 
 		#endregion

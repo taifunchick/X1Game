@@ -1,4 +1,7 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
+
+using Mirror;
+using UnityEngine;
 
 namespace InfimaGames.LowPolyShooterPack
 {
@@ -20,12 +23,30 @@ namespace InfimaGames.LowPolyShooterPack
         
         public CharacterBehaviour GetPlayerCharacter()
         {
-            //Make sure we have a player character that is good to go!
-            if (playerCharacter == null)
-                playerCharacter = UnityEngine.Object.FindObjectOfType<CharacterBehaviour>();
-            
-            //Return.
+            CharacterBehaviour local = FindLocalCharacter();
+            if (local != null)
+            {
+                playerCharacter = local;
+                return playerCharacter;
+            }
+
+            if (playerCharacter != null)
+                return playerCharacter;
+
+            playerCharacter = Object.FindObjectOfType<CharacterBehaviour>();
             return playerCharacter;
+        }
+
+        static CharacterBehaviour FindLocalCharacter()
+        {
+            foreach (var character in Object.FindObjectsOfType<CharacterBehaviour>())
+            {
+                var identity = character.GetComponent<NetworkIdentity>();
+                if (identity != null && identity.isLocalPlayer)
+                    return character;
+            }
+
+            return null;
         }
         
         #endregion

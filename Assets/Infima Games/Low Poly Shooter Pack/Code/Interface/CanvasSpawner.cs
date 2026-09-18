@@ -1,4 +1,4 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -25,15 +25,22 @@ namespace InfimaGames.LowPolyShooterPack.Interface
 
         #region UNITY
 
+        bool spawned;
+
         /// <summary>
-        /// Awake.
+        /// Spawn HUD only when this component is enabled (local player).
+        /// Awake still runs on disabled behaviours, so spawning there would duplicate UI for remotes.
         /// </summary>
-        private void Awake()
+        private void OnEnable()
         {
-            //Spawn Interface.
-            Instantiate(canvasPrefab);
-            //Spawn Quality Settings Menu.
-            Instantiate(qualitySettingsPrefab);
+            if (spawned)
+                return;
+
+            spawned = true;
+            if (canvasPrefab != null)
+                Instantiate(canvasPrefab);
+            if (qualitySettingsPrefab != null)
+                Instantiate(qualitySettingsPrefab);
         }
 
         #endregion

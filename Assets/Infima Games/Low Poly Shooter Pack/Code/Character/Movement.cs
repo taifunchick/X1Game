@@ -1,4 +1,4 @@
-﻿//Copyright 2022, Infima Games. All Rights Reserved.
+//Copyright 2022, Infima Games. All Rights Reserved.
 
 using System.Collections;
 using UnityEngine;
@@ -173,8 +173,10 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         protected override void Awake()
         {
-            //Get Player Character.
-            playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
+            // Prefer the character on this player so remotes do not drive local movement.
+            playerCharacter = GetComponent<CharacterBehaviour>();
+            if (playerCharacter == null)
+                playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
         }
         /// Initializes the FpsController on start.
         protected override void Start()
