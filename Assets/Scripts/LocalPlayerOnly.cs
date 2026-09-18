@@ -1,4 +1,5 @@
-using Mirror; using UnityEngine;
+using Mirror; 
+using UnityEngine;
 /// Put on player root and assign movement, input, camera and weapon objects. Prevents remote players from reading local input.
 public class LocalPlayerOnly : NetworkBehaviour {
  [SerializeField] Behaviour[] localOnlyBehaviours; [SerializeField] GameObject[] localOnlyObjects;
