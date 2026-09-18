@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Mirror;
 
-public class MenuController : MonoBehaviour
+public class MainMenu : MonoBehaviour
 {
     [Header("Настройки сцен")]
     [Tooltip("Точное название сцены футбола в Build Settings")]
@@ -30,7 +30,7 @@ public class MenuController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("NetworkManager не найден на сцене! Убедись, что он существует.");
+            Debug.LogWarning("NetworkManager не найден на сцене! Убедись, что он существует."); 
         }
     }
 
