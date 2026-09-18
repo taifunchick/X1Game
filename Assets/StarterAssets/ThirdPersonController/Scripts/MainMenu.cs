@@ -1,13 +1,14 @@
+using System.IO;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Mirror;
 
 public class MainMenu : MonoBehaviour
 {
     [Header("Настройки сцен")]
     [Tooltip("Точное название сцены футбола в Build Settings")]
     [SerializeField] private string footballSceneName = "FootballScene";
-    
+
     [Tooltip("Точное название сцены лазертага в Build Settings")]
     [SerializeField] private string lasertagSceneName = "LasertagScene";
 
@@ -15,23 +16,22 @@ public class MainMenu : MonoBehaviour
     [Tooltip("IP адрес сервера (оставь localhost для тестов)")]
     [SerializeField] private string serverAddress = "localhost";
 
-    [Tooltip("ВКЛ для главного редактора (Хост). ВЫКЛ для ParrelSync клона и WebGL билда (Клиент).")]
+    [Tooltip("Главный редактор запускает хост, ParrelSync-клоны и WebGL автоматически подключаются клиентами.")]
     [SerializeField] private bool startAsHost = true;
 
-    private NetworkManager _networkManager;
+    private NetworkManager networkManager;
+    private bool connectionPending;
 
     private void Start()
     {
-        _networkManager = NetworkManager.singleton;
-        
-        if (_networkManager != null)
+        networkManager = NetworkManager.singleton;
+        if (networkManager == null)
         {
-            _networkManager.networkAddress = serverAddress;
+            Debug.LogWarning("NetworkManager не найден на сцене! Убедись, что он существует.");
+            return;
         }
-        else
-        {
-            Debug.LogWarning("NetworkManager не найден на сцене! Убедись, что он существует."); 
-        }
+
+        networkManager.networkAddress = serverAddress;
     }
 
     public void OnFootballButtonClicked()
@@ -46,42 +46,68 @@ public class MainMenu : MonoBehaviour
 
     private void LoadSceneAndConnect(string sceneName)
     {
-        SceneManager.sceneLoaded += OnSceneLoadedStartClient;
+        if (connectionPending || NetworkClient.active || NetworkServer.active)
+            return;
+
+        connectionPending = true;
+        SceneManager.sceneLoaded += OnGameSceneLoaded;
         SceneManager.LoadScene(sceneName);
     }
 
-    private void OnSceneLoadedStartClient(Scene scene, LoadSceneMode mode)
+    private void OnGameSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        SceneManager.sceneLoaded -= OnSceneLoadedStartClient;
+        SceneManager.sceneLoaded -= OnGameSceneLoaded;
+        connectionPending = false;
 
-        if (_networkManager != null && !NetworkClient.active)
+        // The manager is DontDestroyOnLoad, but reacquiring it also supports custom managers.
+        networkManager = NetworkManager.singleton;
+        if (networkManager == null || NetworkClient.active || NetworkServer.active)
+            return;
+
+        networkManager.networkAddress = serverAddress;
+        if (ShouldStartHost())
         {
-            // Проверяем нашу галочку из инспектора
-            if (startAsHost)
-            {
-                Debug.Log($"Сцена {scene.name} загружена. Создаем сервер (Хост)...");
-                _networkManager.StartHost();
-            }
-            else
-            {
-                Debug.Log($"Сцена {scene.name} загружена. Подключаемся как клиент к {_networkManager.networkAddress}...");
-                _networkManager.StartClient();
-            }
+            Debug.Log($"Сцена {scene.name} загружена. Создаем хост...");
+            networkManager.StartHost();
         }
+        else
+        {
+            Debug.Log($"Сцена {scene.name} загружена. Подключаемся к {networkManager.networkAddress}...");
+            networkManager.StartClient();
+        }
+    }
+
+    private bool ShouldStartHost()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        return false;
+#elif UNITY_EDITOR
+        // ParrelSync marks clones with this file. Avoid an Editor assembly dependency in runtime code.
+        bool isParrelSyncClone = File.Exists(Path.Combine(Directory.GetParent(Application.dataPath).FullName, ".clone"));
+        return startAsHost && !isParrelSyncClone;
+#else
+        return startAsHost;
+#endif
     }
 
     public void DisconnectAndReturnToMenu()
     {
-        // Правильное отключение в зависимости от того, кем мы были
-        if (NetworkServer.active && NetworkClient.isConnected)
+        networkManager = NetworkManager.singleton;
+        if (networkManager != null)
         {
-            _networkManager.StopHost();
+            if (NetworkServer.active && NetworkClient.active)
+                networkManager.StopHost();
+            else if (NetworkClient.active)
+                networkManager.StopClient();
+            else if (NetworkServer.active)
+                networkManager.StopServer();
         }
-        else if (NetworkClient.isConnected)
-        {
-            _networkManager.StopClient();
-        }
-        
+
         SceneManager.LoadScene("MainMenu");
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnGameSceneLoaded;
     }
 }
