@@ -12,7 +12,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "References")]
 
         [Tooltip("Object to which all crosshair pieces are parented.")]
         [SerializeField, NotNull]
@@ -27,7 +26,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
         [SerializeField, NotNull]
         private RectTransform mainRectTransform;
 
-        [Title(label: "Settings")]
         
         [Tooltip("Minimum and maximum scales for the crosshair.")]
         [SerializeField]
@@ -38,7 +36,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
         [SerializeField]
         private float defaultScale = 50.0f;
         
-        [Title(label: "Interpolation")]
 
         [Tooltip("Interpolation speed of the crosshair' size.")]
         [SerializeField]
@@ -52,7 +49,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
         [SerializeField]
         private SpringSettings interpolationSizeDelta = SpringSettings.Default();
 
-        [Title(label: "Scale Additions")]
         
         [Tooltip("Value used to increase the crosshair' scale while jumping/falling.")]
         [SerializeField]
@@ -66,7 +62,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
         [SerializeField]
         private float movementScaleAddition = 25.0f;
 
-        [Title(label: "Running")]
 
         [Tooltip("Determines the alpha value of the crosshair while the character is performing some action that disables it.")]
         [SerializeField]
@@ -76,7 +71,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
         [SerializeField]
         private float runningScaleAddition = 15.0f;
 
-        [Title(label: "Spread")]
 
         [Tooltip("Animation curve dictating how the crosshair scales as the character shoots more and more.")]
         [SerializeField]

@@ -11,7 +11,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "Settings")]
         
         [Tooltip("Sensitivity when looking around.")]
         [SerializeField]
@@ -21,7 +20,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private Vector2 yClamp = new Vector2(-60, 60);
         
-        [Title(label: "Interpolation")]
 
         [Tooltip("Should the look rotation be interpolated?")]
         [SerializeField]

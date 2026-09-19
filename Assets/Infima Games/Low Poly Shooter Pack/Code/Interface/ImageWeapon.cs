@@ -12,13 +12,11 @@ namespace InfimaGames.LowPolyShooterPack.Interface
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "Colors")]
 
         [Tooltip("Color applied to all images.")]
         [SerializeField]
         private Color imageColor = Color.white;
         
-        [Title(label: "Settings")]
         
         [Tooltip("Weapon Body Image.")]
         [SerializeField]

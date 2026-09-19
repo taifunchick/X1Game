@@ -23,7 +23,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField, NotNull]
         private Animator characterAnimator;
 
-        [Title(label: "Settings")]
 
         [Tooltip("The type of this motion.")]
         [SerializeField]

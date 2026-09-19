@@ -11,7 +11,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "Scope")]
 
         [Tooltip("Determines if the ironsights should be shown on the weapon model.")]
         [SerializeField]
@@ -37,7 +36,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private ScopeBehaviour[] scopeArray;
         
-        [Title(label: "Muzzle")]
 
         [Tooltip("Selected Muzzle Index.")]
         [SerializeField]
@@ -51,7 +49,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private MuzzleBehaviour[] muzzleArray;
         
-        [Title(label: "Laser")]
 
         [Tooltip("Selected Laser Index.")]
         [SerializeField]
@@ -65,7 +62,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private LaserBehaviour[] laserArray;
         
-        [Title(label: "Grip")]
 
         [Tooltip("Selected Grip Index.")]
         [SerializeField]
@@ -79,7 +75,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private GripBehaviour[] gripArray;
         
-        [Title(label: "Magazine")]
 
         [Tooltip("Selected Magazine Index.")]
         [SerializeField]

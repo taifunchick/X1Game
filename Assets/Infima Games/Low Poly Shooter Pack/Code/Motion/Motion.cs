@@ -29,14 +29,12 @@ namespace InfimaGames.LowPolyShooterPack
         
         #region FIELDS SERIALIZED
         
-        [Title(label: "Motion")]
         
         [Tooltip("The Motion's alpha. Used to more easily control how much of the motion is applied.")]
         [Range(0.0f, 1.0f)]
         [SerializeField]
         private float alpha = 1.0f;
 
-        [Title(label: "References")]
         
         [Tooltip("The MotionApplier that will apply this Motion's values.")]
         [SerializeField, NotNull]

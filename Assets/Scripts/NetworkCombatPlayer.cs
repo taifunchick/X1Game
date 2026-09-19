@@ -1,11 +1,16 @@
 using Mirror;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using InfimaGames.LowPolyShooterPack;
 
 /// Add to the player prefab (P_LPSP_FP_CH).
 ///
 /// Правила лазертага: умирать нельзя, здоровья нет. Задача — попасть в других как можно больше раз.
 /// Каждое попадание в любого другого игрока даёт стрелку +1 к счётчику hits (кому попал — неважно).
+///
+/// Патроны: магазин берётся от оружия Infima (Character → Inventory → оружие),
+/// каждый выстрел расходует патрон. Когда патроны закончились — выстрел не идёт
+/// и попадание НЕ засчитывается; через reloadTime секунд магазин перезаряжается.
 ///
 /// У префаба игрока нет коллайдера, только CharacterController, поэтому попадания
 /// рассчитывает СЕРВЕР геометрически: проверяем, пролетел ли луч выстрела достаточно близко
@@ -22,6 +27,12 @@ public class NetworkCombatPlayer : NetworkBehaviour
     [SerializeField] LayerMask hitMask = ~0;      // что может блокировать выстрел (стены, пол, ...)
     [SerializeField] Transform fireOrigin;        // запасная точка выстрела, если камеры нет
 
+    [Header("Патроны")]
+    [Tooltip("Размер магазина, если на игроке нет оружия Infima (Character → Inventory)")]
+    [SerializeField] int defaultMagazineSize = 30;
+    [Tooltip("Сколько секунд длится перезарядка после пустого магазина")]
+    [SerializeField] float reloadTime = 2f;
+
     [Header("Попадание без коллайдера на игроке")]
     [Tooltip("Высота центра тела игрока над его position (m_Center.y у CharacterController = 1)")]
     [SerializeField] float centerHeight = 1f;
@@ -30,13 +41,30 @@ public class NetworkCombatPlayer : NetworkBehaviour
     [Tooltip("Высота колонны тела, которую проверяем (высота CharacterController = 1.8)")]
     [SerializeField] float bodyHeight = 1.8f;
 
+    private Character _character;   // Infima: от него берём оружие и размер магазина
+    private int _localAmmo = -1;    // -1 = ещё не инициализировано
+    private bool _isReloading;
+    private float _reloadReadyTime;
+
+    void Awake()
+    {
+        _character = GetComponent<Character>();
+    }
+
     void Update()
     {
         if (!isLocalPlayer) return;
+
+        // Доводим перезарядку до конца (магазин становится полным).
+        FinishReloadIfNeeded();
+
         if (NetworkRoundManager.Instance != null && NetworkRoundManager.Instance.finished) return;
         if (!Input.GetMouseButtonDown(0)) return;
         // Клик по UI (выбор команды, кнопки) не должен стрелять.
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
+        // Патроны: если магазин пуст — выстрела не будет и попадание не засчитается.
+        if (!TryConsumeAmmo()) return;
 
         Vector3 origin;
         Vector3 direction;
@@ -51,6 +79,71 @@ public class NetworkCombatPlayer : NetworkBehaviour
             direction = transform.forward;
         }
         CmdFire(origin, direction);
+    }
+
+    /// Оружие Infima на этом игроке (может быть null, если оружие не готово).
+    WeaponBehaviour LocalWeapon
+    {
+        get
+        {
+            if (_character == null)
+                _character = GetComponent<Character>();
+            InventoryBehaviour inventory = _character != null ? _character.GetInventory() : null;
+            return inventory != null ? inventory.GetEquipped() : null;
+        }
+    }
+
+    /// Вместимость магазина: от оружия Infima, fallback — defaultMagazineSize.
+    int MagazineCapacity()
+    {
+        WeaponBehaviour weapon = LocalWeapon;
+        if (weapon != null)
+        {
+            int total = weapon.GetAmmunitionTotal();
+            if (total > 0)
+                return total;
+        }
+        return Mathf.Max(1, defaultMagazineSize);
+    }
+
+    /// Перезарядка завершилась — магазин снова полный.
+    void FinishReloadIfNeeded()
+    {
+        if (!_isReloading || Time.time < _reloadReadyTime) return;
+
+        _isReloading = false;
+        _localAmmo = MagazineCapacity();
+
+        WeaponBehaviour weapon = LocalWeapon;
+        if (weapon != null)
+            weapon.FillAmmunition(0); // докинуть патроны в Magazine Infima
+    }
+
+    /// Снимает один патрон. false = патронов нет (выстрел запрещён).
+    bool TryConsumeAmmo()
+    {
+        if (_localAmmo < 0)
+            _localAmmo = MagazineCapacity();
+
+        if (_localAmmo <= 0)
+        {
+            // Патроны закончились: попадание не засчитываем, запускаем перезарядку.
+            if (!_isReloading)
+            {
+                _isReloading = true;
+                _reloadReadyTime = Time.time + Mathf.Max(0.1f, reloadTime);
+                WeaponBehaviour weapon = LocalWeapon;
+                if (weapon != null)
+                    weapon.Reload(); // анимация и звук перезарядки, если они есть
+            }
+            return false;
+        }
+
+        _localAmmo--;
+        WeaponBehaviour weapon = LocalWeapon;
+        if (weapon != null)
+            weapon.FillAmmunition(-1); // синхронно уменьшаем Magazine Infima
+        return true;
     }
 
     [Command]

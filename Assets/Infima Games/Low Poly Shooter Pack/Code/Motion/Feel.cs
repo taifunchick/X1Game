@@ -33,25 +33,21 @@ namespace InfimaGames.LowPolyShooterPack
         
         #region FIELDS SERIALIZED
 
-        [Title(label: "Standing State")]
         
         [Tooltip("FeelState used while just standing around.")]
         [SerializeField]
         private FeelState standing;
         
-        [Title(label: "Crouching State")]
         
         [Tooltip("FeelState used while crouching.")]
         [SerializeField]
         private FeelState crouching;
         
-        [Title(label: "Aiming State")]
 
         [Tooltip("FeelState used while aiming.")]
         [SerializeField]
         private FeelState aiming;
         
-        [Title(label: "Running State")]
 
         [Tooltip("FeelState used while running.")]
         [SerializeField]

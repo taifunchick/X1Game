@@ -12,7 +12,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "Settings")]
         
         [Tooltip("Mesh.")]
         [SerializeField]

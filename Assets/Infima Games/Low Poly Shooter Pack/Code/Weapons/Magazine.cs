@@ -11,13 +11,11 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "Settings")]
         
         [Tooltip("Total Ammunition.")]
         [SerializeField]
         private int ammunitionTotal = 10;
 
-        [Title(label: "Interface")]
 
         [Tooltip("Interface Sprite.")]
         [SerializeField]

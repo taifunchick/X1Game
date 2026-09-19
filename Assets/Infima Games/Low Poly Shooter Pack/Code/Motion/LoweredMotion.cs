@@ -11,14 +11,12 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "References")]
         
         [Tooltip("The LowerWeapon component that determines whether the character is lowering their " +
                  "weapon, or not at any given time.")]
         [SerializeField, NotNull]
         private LowerWeapon lowerWeapon;
 
-        [Title(label: "References Character")]
         
         [Tooltip("The character's CharacterBehaviour component.")]
         [SerializeField, NotNull]
