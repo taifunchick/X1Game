@@ -2,6 +2,12 @@ using UnityEngine;
 using TMPro;
 using Mirror;
 
+/// Лазертаг: счёт попаданий (убийств больше нет).
+/// Каждый раз, когда игрок попадает в другого игрока, стрелку записывают +1.
+///
+/// Панель в углу экрана показывает те же числа, что и главный HUD (Red/Blue):
+/// сумма попаданий игроков каждой команды. Источник данных — NetworkCombatPlayer.hits,
+/// поэтому оба счетчика никогда не расходятся.
 public class LasertagScoreManager : NetworkBehaviour
 {
     [SyncVar(hook = nameof(OnScoreChanged))]
@@ -15,41 +21,60 @@ public class LasertagScoreManager : NetworkBehaviour
 
     public static LasertagScoreManager Instance { get; private set; }
 
+    private int _shownRed = -1;
+    private int _shownBlue = -1;
+
     public override void OnStartClient()
     {
         base.OnStartClient();
         Instance = this;
-        Debug.Log("LasertagScoreManager: OnStartClient called");
         CreateScoreTextIfNeeded();
-        UpdateScoreUI();
+        Refresh();
     }
 
     public override void OnStartServer()
     {
         base.OnStartServer();
         Instance = this;
-        Debug.Log("LasertagScoreManager: OnStartServer called");
     }
 
     private void OnScoreChanged(int oldValue, int newValue)
     {
-        Debug.Log($"LasertagScoreManager: OnScoreChanged {oldValue} -> {newValue}");
-        UpdateScoreUI();
+        Refresh();
     }
 
-    [ClientRpc]
-    public void RpcUpdateScore(int red, int blue)
+    void Update()
     {
-        Debug.Log($"LasertagScoreManager: RpcUpdateScore called red={red}, blue={blue}");
-        redTeamScore = red;
-        blueTeamScore = blue;
-        UpdateScoreUI();
+        Refresh();
     }
 
+    /// Считает живые суммы попаданий по командам и обновляет текст, если он изменился.
+    private void Refresh()
+    {
+        int r = 0, b = 0;
+        NetworkCombatPlayer[] players = FindObjectsOfType<NetworkCombatPlayer>();
+        foreach (var p in players)
+        {
+            if (p == null) continue;
+            if (p.team == "Red") r += p.hits;
+            else if (p.team == "Blue") b += p.hits;
+        }
+
+        if (r == _shownRed && b == _shownBlue) return;
+        _shownRed = r;
+        _shownBlue = b;
+
+        if (_redScoreText != null)
+            _redScoreText.text = $"Red: {r}";
+        if (_blueScoreText != null)
+            _blueScoreText.text = $"Blue: {b}";
+    }
+
+    /// Легаси-метод (использовала старая сценка Lasertag.cs). Основной счёт
+    /// ведут NetworkCombatPlayer.hits, так что сюда заходить не нужно.
     [Server]
     public void ServerAddScore(string team)
     {
-        Debug.Log($"LasertagScoreManager: ServerAddScore called for team={team}");
         if (team == "Red")
         {
             redTeamScore++;
@@ -62,9 +87,6 @@ public class LasertagScoreManager : NetworkBehaviour
         {
             Debug.LogWarning($"LasertagScoreManager: invalid team '{team}' passed to ServerAddScore.");
         }
-
-        UpdateScoreUI();
-        RpcUpdateScore(redTeamScore, blueTeamScore);
     }
 
     private void CreateScoreTextIfNeeded()
@@ -96,19 +118,6 @@ public class LasertagScoreManager : NetworkBehaviour
             rt.anchorMax = new Vector2(0, 1);
             rt.anchoredPosition = new Vector2(10, -60);
             rt.sizeDelta = new Vector2(100, 50);
-        }
-    }
-
-    private void UpdateScoreUI()
-    {
-        if (_redScoreText != null)
-        {
-            _redScoreText.text = $"Red: {redTeamScore}";
-        }
-
-        if (_blueScoreText != null)
-        {
-            _blueScoreText.text = $"Blue: {blueTeamScore}";
         }
     }
 }

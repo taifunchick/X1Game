@@ -1,24 +1,146 @@
 using Mirror;
 using UnityEngine;
-using System.Collections;
+using UnityEngine.EventSystems;
 
-[System.Serializable] public struct WeaponDamage { public string id; public float damage; }
-/// Add to the player prefab. Only the server changes health, kills and respawns.
+/// Add to the player prefab (P_LPSP_FP_CH).
+///
+/// Правила лазертага: умирать нельзя, здоровья нет. Задача — попасть в других как можно больше раз.
+/// Каждое попадание в любого другого игрока даёт стрелку +1 к счётчику hits (кому попал — неважно).
+///
+/// У префаба игрока нет коллайдера, только CharacterController, поэтому попадания
+/// рассчитывает СЕРВЕР геометрически: проверяем, пролетел ли луч выстрела достаточно близко
+/// к "колонне" тела игрока. Стены по-прежнему блокируют выстрел (raycast по окружению).
 public class NetworkCombatPlayer : NetworkBehaviour
 {
-    [SyncVar] public float health = 100f;
     [SyncVar] public string team = "";
-    [SerializeField] public WeaponDamage[] weapons = { new WeaponDamage { id="Rifle", damage=25 }, new WeaponDamage { id="Shotgun", damage=60 } };
-    [SerializeField] float range = 200f; [SerializeField] LayerMask hitMask = ~0;
-    [SerializeField] Transform fireOrigin;
-    [SyncVar] public int kills;
-    bool dead;
-    void Update() { if (!isLocalPlayer || dead || (NetworkRoundManager.Instance && NetworkRoundManager.Instance.finished)) return; if (Input.GetMouseButtonDown(0)) CmdFire(Camera.main ? Camera.main.transform.position : transform.position + Vector3.up, Camera.main ? Camera.main.transform.forward : transform.forward, 0); }
-    [Command] void CmdFire(Vector3 origin, Vector3 direction, int weaponIndex) {
-        if (dead) return; float damage = (weaponIndex >= 0 && weaponIndex < weapons.Length) ? weapons[weaponIndex].damage : 25f;
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore)) { var target = hit.collider.GetComponentInParent<NetworkCombatPlayer>(); if (target != null && target != this && target.team != team) target.ServerTakeDamage(damage, this); }
+
+    /// Сколько раз этот игрок попал в других. Меняет только сервер.
+    [SyncVar] public int hits = 0;
+
+    [Header("Выстрел")]
+    [SerializeField] float range = 200f;
+    [SerializeField] LayerMask hitMask = ~0;      // что может блокировать выстрел (стены, пол, ...)
+    [SerializeField] Transform fireOrigin;        // запасная точка выстрела, если камеры нет
+
+    [Header("Попадание без коллайдера на игроке")]
+    [Tooltip("Высота центра тела игрока над его position (m_Center.y у CharacterController = 1)")]
+    [SerializeField] float centerHeight = 1f;
+    [Tooltip("Радиус попадания: радиус CharacterController (0.3) + запас")]
+    [SerializeField] float hitRadius = 0.5f;
+    [Tooltip("Высота колонны тела, которую проверяем (высота CharacterController = 1.8)")]
+    [SerializeField] float bodyHeight = 1.8f;
+
+    void Update()
+    {
+        if (!isLocalPlayer) return;
+        if (NetworkRoundManager.Instance != null && NetworkRoundManager.Instance.finished) return;
+        if (!Input.GetMouseButtonDown(0)) return;
+        // Клик по UI (выбор команды, кнопки) не должен стрелять.
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
+        Vector3 origin;
+        Vector3 direction;
+        if (Camera.main != null)
+        {
+            origin = Camera.main.transform.position;
+            direction = Camera.main.transform.forward;
+        }
+        else
+        {
+            origin = fireOrigin != null ? fireOrigin.position : transform.position;
+            direction = transform.forward;
+        }
+        CmdFire(origin, direction);
     }
-    [Server] void ServerTakeDamage(float damage, NetworkCombatPlayer attacker) { if (dead) return; health = Mathf.Max(0, health - damage); if (health <= 0) { dead = true; if (attacker) attacker.kills++; StartCoroutine(Respawn()); } }
-    [Server] IEnumerator Respawn() { yield return new WaitForSeconds(3); Transform[] points = FindObjectsOfType<Transform>(); var valid = new System.Collections.Generic.List<Transform>(); foreach (var p in points) if (p.CompareTag("Respawn")) valid.Add(p); if (valid.Count > 0) transform.SetPositionAndRotation(valid[Random.Range(0, valid.Count)].position, transform.rotation); health = 100; dead = false; }
-    public override void OnStartLocalPlayer() { base.OnStartLocalPlayer(); if (fireOrigin == null) fireOrigin = transform; }
+
+    [Command]
+    public void CmdFire(Vector3 origin, Vector3 direction)
+    {
+        if (direction.sqrMagnitude < 0.5f) return;
+        direction.Normalize();
+
+        // Сферы-выстрелы лежат на Ignore Raycast и не должны блокировать другие выстрелы.
+        int shotLayerBit = 1 << LayerMask.NameToLayer("Ignore Raycast");
+        int mask = hitMask.value & ~shotLayerBit;
+
+        // 1) Raycast: если CharacterController виден для raycast, первый игрок на луче —
+        //    и есть цель. Иначе raycast находит стену и выстрел не пролетает сквозь неё.
+        float wallDistance = float.MaxValue;
+        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, mask, QueryTriggerInteraction.Ignore))
+        {
+            var target = hit.collider.GetComponentInParent<NetworkCombatPlayer>();
+            if (target != null && target != this)
+            {
+                RegisterHit(target);
+                return;
+            }
+            wallDistance = hit.distance;
+        }
+
+        // 2) У игрока нет коллайдера — геометрия: ищем ближайшего игрока, чьё тело
+        //    луч выстрела "задевает" в пределах hitRadius.
+        float maxDistance = Mathf.Min(range, wallDistance);
+        NetworkCombatPlayer closest = null;
+        float closestDistance = float.MaxValue;
+
+        NetworkCombatPlayer[] players = FindObjectsOfType<NetworkCombatPlayer>();
+        foreach (var other in players)
+        {
+            if (other == null || other == this) continue;
+
+            float dist = DistanceToBody(origin, direction, maxDistance, other);
+            if (dist >= 0f && dist < closestDistance)
+            {
+                closest = other;
+                closestDistance = dist;
+            }
+        }
+
+        if (closest != null)
+            RegisterHit(closest);
+    }
+
+    /// Вернёт расстояние вдоль луча до тела игрока, если луч проходит мимо тела
+    /// на расстоянии <= hitRadius; иначе -1. Тело = вертикальная колонна (капсула)
+    /// высотой bodyHeight вокруг centerHeight, проверяем по нескольким точкам —
+    /// так попадание засчитывается в любую часть тела (в ноги, в голову).
+    [Server]
+    float DistanceToBody(Vector3 origin, Vector3 direction, float maxDistance, NetworkCombatPlayer target)
+    {
+        Vector3 basePos = target.transform.position;
+        float half = bodyHeight * 0.5f;
+        float best = -1f;
+
+        const int samples = 5;
+        for (int i = 0; i < samples; i++)
+        {
+            float h = centerHeight - half + bodyHeight * (i / (float)(samples - 1));
+            Vector3 point = basePos + Vector3.up * h;
+
+            float along = Vector3.Dot(point - origin, direction);
+            if (along <= 0f || along > maxDistance) continue;
+
+            float perpendicular = (point - (origin + direction * along)).magnitude;
+            if (perpendicular <= hitRadius && (best < 0f || along < best))
+                best = along;
+        }
+        return best;
+    }
+
+    /// Сервер: стрелку +1. Здоровья и смерти нет — только попадания.
+    [Server]
+    void RegisterHit(NetworkCombatPlayer victim)
+    {
+        hits++;
+        Debug.Log($"[Combat] {name} (team={team}) попал в {victim.name}. Всего попаданий: {hits}");
+    }
+
+    /// Команду присылает UI выбора команды (Метеор / Вымпел).
+    [Command]
+    public void CmdSetTeam(string teamName)
+    {
+        if (string.IsNullOrWhiteSpace(teamName) || team == teamName) return;
+        team = teamName;
+        Debug.Log($"[Combat] {name}: назначена команда {teamName}");
+    }
 }
