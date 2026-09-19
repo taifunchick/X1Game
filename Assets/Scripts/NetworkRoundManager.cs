@@ -1,6 +1,5 @@
 using Mirror;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 
@@ -23,24 +22,5 @@ public class NetworkRoundManager : NetworkBehaviour
         if (timerText) timerText.text = string.Format("{0}:{1:00}", seconds / 60, seconds % 60);
         if (isServer && seconds <= 0) { finished = true; StartCoroutine(EndMatch()); }
     }
-    [Server] IEnumerator EndMatch()
-    {
-        yield return new WaitForSeconds(5f);
-
-        if (NetworkClient.active)
-        {
-            // Хост: останавливаем игру — Mirror сам вернёт всех в offlineScene (меню).
-            // ServerChangeScene(меню) при живом сервере приводил к тому, что игроки респавнились прямо в сцене меню.
-            NetworkManager.singleton.StopHost();
-            yield break;
-        }
-
-        // Выделенный сервер: в меню возвращаться некуда — перезапускаем игровую сцену (новый раунд).
-        // Иначе сервер навсегда оставался в сцене меню и новые игроки не могли заспавниться.
-        string currentScene = SceneManager.GetActiveScene().path;
-        if (!string.IsNullOrEmpty(currentScene))
-            NetworkManager.singleton.ServerChangeScene(currentScene);
-        else if (!string.IsNullOrEmpty(mainMenuScene))
-            NetworkManager.singleton.ServerChangeScene(mainMenuScene);
-    }
+    [Server] IEnumerator EndMatch() { yield return new WaitForSeconds(5f); if (!string.IsNullOrEmpty(mainMenuScene)) NetworkManager.singleton.ServerChangeScene(mainMenuScene); }
 }
