@@ -132,9 +132,9 @@ public class NetworkCombatPlayer : NetworkBehaviour
             {
                 _isReloading = true;
                 _reloadReadyTime = Time.time + Mathf.Max(0.1f, reloadTime);
-                WeaponBehaviour weapon = LocalWeapon;
-                if (weapon != null)
-                    weapon.Reload(); // анимация и звук перезарядки, если они есть
+                WeaponBehaviour reloadWeapon = LocalWeapon;
+                if (reloadWeapon != null)
+                    reloadWeapon.Reload(); // анимация и звук перезарядки, если они есть
             }
             return false;
         }
