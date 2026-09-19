@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using InfimaGames.LowPolyShooterPack;
 
 /// Add to the player prefab (P_LPSP_FP_CH).
@@ -8,15 +8,31 @@ using InfimaGames.LowPolyShooterPack;
 /// Правила лазертага: умирать нельзя, здоровья нет. Задача — попасть в других как можно больше раз.
 /// Каждое попадание в любого другого игрока даёт стрелку +1 к счётчику hits (кому попал — неважно).
 ///
-/// Патроны: магазин берётся от оружия Infima (Character → Inventory → оружие),
-/// каждый выстрел расходует патрон. Когда патроны закончились — выстрел не идёт
-/// и попадание НЕ засчитывается; через reloadTime секунд магазин перезаряжается.
+/// Патроны. Единственный источник правды — оружие Infima (Character → Inventory → оружие):
+/// именно оно считает патроны, показывает их в HUD, играет анимацию и перезарядку (R).
+/// Этот компонент НЕ ведёт свой счётчик патронов и НЕ слушает кнопку мыши — он подписан на
+/// событие WeaponBehaviour.ShotFired, которое оружие поднимает только тогда, когда выстрел
+/// действительно произошёл и патрон действительно потрачен. Отсюда следствия:
+///  - патронов нет  → оружие не стреляет → попадания нет, как бы игрок ни спамил мышкой;
+///  - очередь (зажал кнопку на автоматическом оружии) → проверяется КАЖДЫЙ выстрел очереди,
+///    а не только первый;
+///  - дробовик/гранатомёт (несколько пуль за выстрел) → это один выстрел, одно попадание;
+///  - перезарядка — штатная, Infima, никаких своих таймеров, которые могут разойтись с HUD.
 ///
 /// У префаба игрока нет коллайдера, только CharacterController, поэтому попадания
 /// рассчитывает СЕРВЕР геометрически: проверяем, пролетел ли луч выстрела достаточно близко
 /// к "колонне" тела игрока. Стены по-прежнему блокируют выстрел (raycast по окружению).
 public class NetworkCombatPlayer : NetworkBehaviour
 {
+    /// <summary>
+    /// Все активные игроки в сцене. Есть и на сервере, и на клиенте.
+    /// Заменяет FindObjectsOfType, который раньше вызывался на каждый выстрел и каждый кадр.
+    /// </summary>
+    private static readonly List<NetworkCombatPlayer> instances = new List<NetworkCombatPlayer>();
+
+    /// <summary>Все активные NetworkCombatPlayer в сцене.</summary>
+    public static IReadOnlyList<NetworkCombatPlayer> Instances => instances;
+
     [SyncVar] public string team = "";
 
     /// Сколько раз этот игрок попал в других. Меняет только сервер.
@@ -27,11 +43,11 @@ public class NetworkCombatPlayer : NetworkBehaviour
     [SerializeField] LayerMask hitMask = ~0;      // что может блокировать выстрел (стены, пол, ...)
     [SerializeField] Transform fireOrigin;        // запасная точка выстрела, если камеры нет
 
-    [Header("Патроны")]
-    [Tooltip("Размер магазина, если на игроке нет оружия Infima (Character → Inventory)")]
-    [SerializeField] int defaultMagazineSize = 30;
-    [Tooltip("Сколько секунд длится перезарядка после пустого магазина")]
-    [SerializeField] float reloadTime = 2f;
+    [Header("Защита от спама на сервере")]
+    [Tooltip("Минимальный интервал между выстрелами одного игрока, который принимает сервер. " +
+             "Самое быстрое оружие Infima — 800 выстрелов/мин (0.075 c), поэтому честной стрельбе " +
+             "это не мешает, а спам командами от взломанного клиента отсекается.")]
+    [SerializeField] float minShotInterval = 0.05f;
 
     [Header("Попадание без коллайдера на игроке")]
     [Tooltip("Высота центра тела игрока над его position (m_Center.y у CharacterController = 1)")]
@@ -41,47 +57,50 @@ public class NetworkCombatPlayer : NetworkBehaviour
     [Tooltip("Высота колонны тела, которую проверяем (высота CharacterController = 1.8)")]
     [SerializeField] float bodyHeight = 1.8f;
 
-    private Character _character;   // Infima: от него берём оружие и размер магазина
-    private int _localAmmo = -1;    // -1 = ещё не инициализировано
-    private bool _isReloading;
-    private float _reloadReadyTime;
+    private Character _character;                 // Infima: от него берём оружие и камеру
+    private double _lastShotServerTime = double.MinValue;
+    private bool _warnedNoWeapon;
+
+    // Оружия, на событие выстрела которых мы подписаны, и временный список для поиска.
+    private readonly List<WeaponBehaviour> subscribedWeapons = new List<WeaponBehaviour>();
+    private readonly List<WeaponBehaviour> foundWeapons = new List<WeaponBehaviour>();
 
     void Awake()
     {
         _character = GetComponent<Character>();
     }
 
+    void OnEnable()
+    {
+        if (!instances.Contains(this))
+            instances.Add(this);
+    }
+
+    void OnDisable()
+    {
+        instances.Remove(this);
+    }
+
+    public override void OnStartLocalPlayer()
+    {
+        base.OnStartLocalPlayer();
+        EnsureWeaponSubscriptions();
+    }
+
+    void OnDestroy()
+    {
+        UnsubscribeWeapons();
+    }
+
     void Update()
     {
         if (!isLocalPlayer) return;
 
-        // Доводим перезарядку до конца (магазин становится полным).
-        FinishReloadIfNeeded();
-
-        if (NetworkRoundManager.Instance != null && NetworkRoundManager.Instance.finished) return;
-        if (!Input.GetMouseButtonDown(0)) return;
-        // Клик по UI (выбор команды, кнопки) не должен стрелять.
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
-
-        // Патроны: если магазин пуст — выстрела не будет и попадание не засчитается.
-        if (!TryConsumeAmmo()) return;
-
-        Vector3 origin;
-        Vector3 direction;
-        if (Camera.main != null)
-        {
-            origin = Camera.main.transform.position;
-            direction = Camera.main.transform.forward;
-        }
-        else
-        {
-            origin = fireOrigin != null ? fireOrigin.position : transform.position;
-            direction = transform.forward;
-        }
-        CmdFire(origin, direction);
+        // Оружие можно переключить (колесо мыши / X) — следим, чтобы его выстрелы долетали до сервера.
+        EnsureWeaponSubscriptions();
     }
 
-    /// Оружие Infima на этом игроке (может быть null, если оружие не готово).
+    /// Оружие Infima, которое сейчас в руках (может быть null, если инвентарь не готов).
     WeaponBehaviour LocalWeapon
     {
         get
@@ -93,57 +112,127 @@ public class NetworkCombatPlayer : NetworkBehaviour
         }
     }
 
-    /// Вместимость магазина: от оружия Infima, fallback — defaultMagazineSize.
-    int MagazineCapacity()
+    /// <summary>
+    /// Подписка на выстрелы ВСЕХ оружий игрока, а не только текущего.
+    /// Так переключение оружия не может потерять выстрел из-за порядка Update, а патроны
+    /// каждое оружие считает свои — нас интересует только факт реального выстрела.
+    /// </summary>
+    void EnsureWeaponSubscriptions()
     {
-        WeaponBehaviour weapon = LocalWeapon;
-        if (weapon != null)
+        // Ничего не пересобираем, пока текущее оружие уже под подпиской (обычный случай).
+        WeaponBehaviour equipped = LocalWeapon;
+        if (equipped != null && subscribedWeapons.Contains(equipped))
         {
-            int total = weapon.GetAmmunitionTotal();
-            if (total > 0)
-                return total;
-        }
-        return Mathf.Max(1, defaultMagazineSize);
-    }
-
-    /// Перезарядка завершилась — магазин снова полный.
-    void FinishReloadIfNeeded()
-    {
-        if (!_isReloading || Time.time < _reloadReadyTime) return;
-
-        _isReloading = false;
-        _localAmmo = MagazineCapacity();
-
-        WeaponBehaviour weapon = LocalWeapon;
-        if (weapon != null)
-            weapon.FillAmmunition(0); // докинуть патроны в Magazine Infima
-    }
-
-    /// Снимает один патрон. false = патронов нет (выстрел запрещён).
-    bool TryConsumeAmmo()
-    {
-        if (_localAmmo < 0)
-            _localAmmo = MagazineCapacity();
-
-        if (_localAmmo <= 0)
-        {
-            // Патроны закончились: попадание не засчитываем, запускаем перезарядку.
-            if (!_isReloading)
-            {
-                _isReloading = true;
-                _reloadReadyTime = Time.time + Mathf.Max(0.1f, reloadTime);
-                WeaponBehaviour reloadWeapon = LocalWeapon;
-                if (reloadWeapon != null)
-                    reloadWeapon.Reload(); // анимация и звук перезарядки, если они есть
-            }
-            return false;
+            _warnedNoWeapon = false;
+            return;
         }
 
-        _localAmmo--;
-        WeaponBehaviour weapon = LocalWeapon;
-        if (weapon != null)
-            weapon.FillAmmunition(-1); // синхронно уменьшаем Magazine Infima
-        return true;
+        // Оружия в руках пока нет (инвентарь ещё не инициализирован), но подписки мы уже собрали.
+        // Пересобирать их каждый кадр смысла нет.
+        if (equipped == null && subscribedWeapons.Count > 0)
+            return;
+
+        // Ищем оружия заново. Инвентарь Infima хранит их дочерними объектами префаба игрока,
+        // часть из них выключена — поэтому includeInactive: true. Перегрузка со списком не мусорит.
+        foundWeapons.Clear();
+        GetComponentsInChildren<WeaponBehaviour>(true, foundWeapons);
+
+        // Забываем те, которых больше нет.
+        for (int i = subscribedWeapons.Count - 1; i >= 0; i--)
+        {
+            WeaponBehaviour weapon = subscribedWeapons[i];
+            if (weapon != null && foundWeapons.Contains(weapon)) continue;
+
+            if (weapon != null)
+                weapon.ShotFired -= OnWeaponShot;
+            subscribedWeapons.RemoveAt(i);
+        }
+
+        // Подписываемся на новые.
+        foreach (WeaponBehaviour weapon in foundWeapons)
+        {
+            if (weapon == null || subscribedWeapons.Contains(weapon)) continue;
+
+            weapon.ShotFired += OnWeaponShot;
+            subscribedWeapons.Add(weapon);
+        }
+
+        // Совсем без оружия Infima выстрелов не бывает — попаданий тоже.
+        if (subscribedWeapons.Count == 0)
+            WarnNoWeaponOnce();
+        else
+            _warnedNoWeapon = false;
+    }
+
+    void UnsubscribeWeapons()
+    {
+        foreach (WeaponBehaviour weapon in subscribedWeapons)
+        {
+            if (weapon != null)
+                weapon.ShotFired -= OnWeaponShot;
+        }
+        subscribedWeapons.Clear();
+    }
+
+    void WarnNoWeaponOnce()
+    {
+        if (_warnedNoWeapon) return;
+        _warnedNoWeapon = true;
+        Debug.LogWarning("[Combat] У локального игрока нет оружия Infima (Character → Inventory) — " +
+                         "выстрелов и попаданий не будет.");
+    }
+
+    /// <summary>
+    /// Оружие Infima РЕАЛЬНО выстрелило: патрон потрачен, анимация и эффекты сыграны.
+    /// Это единственная точка, из которой выстрел уходит на сервер, поэтому попадание
+    /// никогда не засчитывается без патрона и никогда не теряется внутри очереди.
+    /// </summary>
+    void OnWeaponShot(WeaponBehaviour weapon)
+    {
+        // Стрелять за нас может только наш собственный игрок.
+        if (!isLocalPlayer) return;
+
+        // Раунд закончен — попадания больше не считаем.
+        if (RoundFinished()) return;
+
+        if (!TryGetAim(out Vector3 origin, out Vector3 direction)) return;
+
+        CmdFire(origin, direction);
+    }
+
+    /// Точка и направление выстрела. Берём мировую камеру Infima — по ней же летят пули оружия
+    /// и по ней рисуется прицел, так что попадание совпадает с тем, что видит игрок.
+    bool TryGetAim(out Vector3 origin, out Vector3 direction)
+    {
+        if (_character == null)
+            _character = GetComponent<Character>();
+
+        Camera aimCamera = _character != null ? _character.GetCameraWorld() : null;
+        if (aimCamera == null)
+            aimCamera = Camera.main;
+
+        if (aimCamera != null)
+        {
+            origin = aimCamera.transform.position;
+            direction = aimCamera.transform.forward;
+        }
+        else if (fireOrigin != null)
+        {
+            origin = fireOrigin.position;
+            direction = fireOrigin.forward;
+        }
+        else
+        {
+            origin = transform.position + Vector3.up * centerHeight;
+            direction = transform.forward;
+        }
+
+        return direction.sqrMagnitude > 0.0001f;
+    }
+
+    static bool RoundFinished()
+    {
+        return NetworkRoundManager.Instance != null && NetworkRoundManager.Instance.finished;
     }
 
     [Command]
@@ -152,8 +241,22 @@ public class NetworkCombatPlayer : NetworkBehaviour
         if (direction.sqrMagnitude < 0.5f) return;
         direction.Normalize();
 
+        // Раунд закончен — попадания не считаем.
+        if (RoundFinished()) return;
+
+        /*
+         * Анти-спам. Клиент отправляет выстрел только по событию реального выстрела оружия,
+         * но доверять клиенту полностью нельзя: модифицированный клиент может слать CmdFire
+         * пачками. Настоящее оружие Infima стреляет не чаще 800 выстрелов/мин (0.075 c),
+         * поэтому всё, что приходит чаще minShotInterval, просто игнорируем.
+         */
+        if (NetworkTime.time - _lastShotServerTime < Mathf.Max(0f, minShotInterval))
+            return;
+        _lastShotServerTime = NetworkTime.time;
+
         // Сферы-выстрелы лежат на Ignore Raycast и не должны блокировать другие выстрелы.
-        int shotLayerBit = 1 << LayerMask.NameToLayer("Ignore Raycast");
+        int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+        int shotLayerBit = ignoreRaycastLayer >= 0 ? 1 << ignoreRaycastLayer : 0;
         int mask = hitMask.value & ~shotLayerBit;
 
         // 1) Raycast: если CharacterController виден для raycast, первый игрок на луче —
@@ -176,9 +279,9 @@ public class NetworkCombatPlayer : NetworkBehaviour
         NetworkCombatPlayer closest = null;
         float closestDistance = float.MaxValue;
 
-        NetworkCombatPlayer[] players = FindObjectsOfType<NetworkCombatPlayer>();
-        foreach (var other in players)
+        for (int i = 0; i < instances.Count; i++)
         {
+            NetworkCombatPlayer other = instances[i];
             if (other == null || other == this) continue;
 
             float dist = DistanceToBody(origin, direction, maxDistance, other);

@@ -198,11 +198,24 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Attachment Manager.
             attachmentManager = GetComponent<WeaponAttachmentManagerBehaviour>();
 
-            //Cache the game mode service. We only need this right here, but we'll cache it in case we ever need it again.
-            gameModeService = ServiceLocator.Current.Get<IGameModeService>();
+            /*
+             * Cache the game mode service. We only need it right here, but we cache it in case we ever
+             * need it again. It may not be registered at all (a dedicated server, or a scene without a
+             * Bootstraper), and throwing here would leave this weapon without a camera, which means that
+             * it could never fire a single shot again.
+             */
+            try
+            {
+                gameModeService = ServiceLocator.Current?.Get<IGameModeService>();
+            }
+            catch (System.InvalidOperationException)
+            {
+                //Not registered.
+            }
+
             // Prefer the owning character so each weapon fires from its own camera.
             characterBehaviour = GetComponentInParent<CharacterBehaviour>();
-            if (characterBehaviour == null)
+            if (characterBehaviour == null && gameModeService != null)
                 characterBehaviour = gameModeService.GetPlayerCharacter();
             //Cache the world camera. We use this in line traces.
             if (characterBehaviour != null && characterBehaviour.GetCameraWorld() != null)
@@ -212,23 +225,32 @@ namespace InfimaGames.LowPolyShooterPack
         {
             #region Cache Attachment References
 
-            //Get Scope.
-            scopeBehaviour = attachmentManager.GetEquippedScope();
-            
-            //Get Magazine.
-            magazineBehaviour = attachmentManager.GetEquippedMagazine();
-            //Get Muzzle.
-            muzzleBehaviour = attachmentManager.GetEquippedMuzzle();
+            //Without an attachment manager there is nothing to cache. Throwing here would leave this
+            //weapon without ammunition, meaning that it could never fire a single shot.
+            if (attachmentManager != null)
+            {
+                //Get Scope.
+                scopeBehaviour = attachmentManager.GetEquippedScope();
 
-            //Get Laser.
-            laserBehaviour = attachmentManager.GetEquippedLaser();
-            //Get Grip.
-            gripBehaviour = attachmentManager.GetEquippedGrip();
+                //Get Magazine.
+                magazineBehaviour = attachmentManager.GetEquippedMagazine();
+                //Get Muzzle.
+                muzzleBehaviour = attachmentManager.GetEquippedMuzzle();
+
+                //Get Laser.
+                laserBehaviour = attachmentManager.GetEquippedLaser();
+                //Get Grip.
+                gripBehaviour = attachmentManager.GetEquippedGrip();
+            }
 
             #endregion
 
             //Max Out Ammo.
-            ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
+            if (magazineBehaviour != null)
+                ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
+            else
+                Debug.LogError($"Weapon '{name}' has no Magazine attachment equipped, so it cannot hold " +
+                               $"any ammunition, and will never fire!", this);
         }
 
         #endregion
@@ -336,7 +358,8 @@ namespace InfimaGames.LowPolyShooterPack
         /// <summary>
         /// GetAmmunitionTotal.
         /// </summary>
-        public override int GetAmmunitionTotal() => magazineBehaviour.GetAmmunitionTotal();
+        public override int GetAmmunitionTotal()
+            => magazineBehaviour != null ? magazineBehaviour.GetAmmunitionTotal() : 0;
         /// <summary>
         /// HasCycledReload.
         /// </summary>
@@ -372,7 +395,8 @@ namespace InfimaGames.LowPolyShooterPack
         /// <summary>
         /// IsFull.
         /// </summary>
-        public override bool IsFull() => ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
+        public override bool IsFull() => magazineBehaviour != null
+                                         && ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
         /// <summary>
         /// HasAmmunition.
         /// </summary>
@@ -414,23 +438,42 @@ namespace InfimaGames.LowPolyShooterPack
             //We need a muzzle in order to fire this weapon!
             if (muzzleBehaviour == null)
                 return;
-            
+
             //Make sure that we have a camera cached, otherwise we don't really have the ability to perform traces.
             if (playerCamera == null)
+                return;
+
+            /*
+             * No ammunition means no shot! The character plays its "Fire Empty" animation in this case, so
+             * there is nothing else for us to do here. This check also guarantees that everything listening
+             * to ShotFired only ever hears about shots that really consumed a bullet, which is what keeps
+             * gameplay code (hit registration, scoring) in sync with the ammunition the player sees.
+             */
+            if (!HasAmmunition())
                 return;
 
             //Play the firing animation.
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
             //Reduce ammunition! We just shot, so we need to get rid of one!
-            ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
+            ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, GetAmmunitionTotal());
 
             //Set the slide back if we just ran out of ammunition.
             if (ammunitionCurrent == 0)
                 SetSlideBack(1);
-            
+
             //Play all muzzle effects.
             muzzleBehaviour.Effect();
+
+            /*
+             * Tell everyone interested that a real shot was just fired. We do this before spawning the
+             * projectiles, so that listeners are notified even for weapons that have no projectile prefab.
+             */
+            NotifyShotFired();
+
+            //Weapons without a projectile prefab are purely hitscan/effects based.
+            if (prefabProjectile == null)
+                return;
 
             //Spawn as many projectiles as we need.
             for (var i = 0; i < shotCount; i++)
@@ -444,8 +487,13 @@ namespace InfimaGames.LowPolyShooterPack
 
                 //Spawn projectile from the projectile spawn point.
                 GameObject projectile = Instantiate(prefabProjectile, playerCamera.position, Quaternion.Euler(playerCamera.eulerAngles + spreadValue));
-                //Add velocity to the projectile.
-                projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
+                if (projectile == null)
+                    continue;
+
+                //Add velocity to the projectile. Projectiles are not required to be physics-driven.
+                Rigidbody projectileRigidbody = projectile.GetComponent<Rigidbody>();
+                if (projectileRigidbody != null)
+                    projectileRigidbody.linearVelocity = projectile.transform.forward * projectileImpulse;
             }
         }
 
@@ -455,8 +503,9 @@ namespace InfimaGames.LowPolyShooterPack
         public override void FillAmmunition(int amount)
         {
             //Update the value by a certain amount.
-            ammunitionCurrent = amount != 0 ? Mathf.Clamp(ammunitionCurrent + amount, 
-                0, GetAmmunitionTotal()) : magazineBehaviour.GetAmmunitionTotal();
+            ammunitionCurrent = amount != 0
+                ? Mathf.Clamp(ammunitionCurrent + amount, 0, GetAmmunitionTotal())
+                : GetAmmunitionTotal();
         }
         /// <summary>
         /// SetSlideBack.

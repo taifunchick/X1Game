@@ -11,7 +11,10 @@ public class NetworkKillScoreUI : NetworkBehaviour {
    NetworkCombatPlayer me = NetworkClient.localPlayer != null
      ? NetworkClient.localPlayer.GetComponent<NetworkCombatPlayer>() : null;
    int my = me != null ? me.hits : 0;
-   foreach(var p in FindObjectsOfType<NetworkCombatPlayer>()){
+   var players = NetworkCombatPlayer.Instances;
+   for(int i=0;i<players.Count;i++){
+     var p=players[i];
+     if(p==null) continue;
      if(p.team=="Red") r+=p.hits;
      else if(p.team=="Blue") b+=p.hits;
    }

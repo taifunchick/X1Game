@@ -66,8 +66,12 @@ namespace InfimaGames.LowPolyShooterPack
                 return;
             }
 
-            //Try to get an ItemAnimationDataBehaviour from the equipped weapon.
-            var animationDataBehaviour = inventoryBehaviour.GetEquipped().GetComponent<ItemAnimationDataBehaviour>();
+            //Try to get an ItemAnimationDataBehaviour from the equipped weapon. There may be no weapon
+            //equipped at all, and reading a component off of nothing would throw every single frame.
+            WeaponBehaviour leaningWeapon = inventoryBehaviour.GetEquipped();
+            var animationDataBehaviour = leaningWeapon != null
+                ? leaningWeapon.GetComponent<ItemAnimationDataBehaviour>()
+                : null;
             //If there's none, then we don't even need to run this script at all, basically.
             if (animationDataBehaviour == null)
                 return;

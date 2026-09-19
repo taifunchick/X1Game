@@ -62,6 +62,11 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public FeelState GetState(Animator characterAnimator)
         {
+            //Without an Animator we cannot know anything about the character's state, so we simply use
+            //the default one. Callers tick every frame, and must never throw because of a missing reference.
+            if (characterAnimator == null)
+                return Standing;
+
             //Running.
             if (characterAnimator.GetBool(AHashes.Running))
                 return Running;
