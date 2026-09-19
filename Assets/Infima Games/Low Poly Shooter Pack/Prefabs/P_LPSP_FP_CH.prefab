@@ -2715,7 +2715,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _rend: {fileID: 4013711433829634408}
-  _color: {r: 0, g: 0, b: 0, a: 0}
+  _color: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &4220028214838519895
 GameObject:
   m_ObjectHideFlags: 0

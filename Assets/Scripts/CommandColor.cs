@@ -1,9 +1,10 @@
 using UnityEngine;
 using Mirror;
 
-public class CommandColor : NetworkBehaviour   // Вешается на обьект визуального касания (работает только на сервере)
+// Р—РѕРЅР°-С‚СЂРёРіРіРµСЂ: РєСЂР°СЃРёС‚ Р·Р°С€РµРґС€РµРіРѕ РёРіСЂРѕРєР° РІ Р·Р°РґР°РЅРЅС‹Р№ С†РІРµС‚ (С†РІРµС‚ Р·РѕРЅС‹ = РєРѕРјР°РЅРґР°).
+public class CommandColor : NetworkBehaviour
 {
-    [SerializeField] private Color _color; // цвет на который будет изменяться перс
+    [SerializeField] private Color _color; // С†РІРµС‚, РІ РєРѕС‚РѕСЂС‹Р№ РєСЂР°СЃРёС‚СЃСЏ РёРіСЂРѕРє
 
     private void OnTriggerEnter(Collider other)
     {
@@ -11,9 +12,11 @@ public class CommandColor : NetworkBehaviour   // Вешается на обьект визуального
         {
             if (other.gameObject.CompareTag("Player"))
             {
-                other.gameObject.GetComponent<ColorChanger>().SetColor(_color);
+                // ColorChanger РјРѕР¶РµС‚ РІРёСЃРµС‚СЊ РЅР° РґРѕС‡РµСЂРЅРµР№ Capsule вЂ” РёС‰РµРј РїРѕ РІСЃРµРјСѓ РёРіСЂРѕРєСѓ.
+                ColorChanger changer = other.gameObject.GetComponentInChildren<ColorChanger>();
+                if (changer != null)
+                    changer.SetColor(_color);
             }
         }
     }
 }
-

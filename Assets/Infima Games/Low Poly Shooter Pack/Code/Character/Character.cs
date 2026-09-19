@@ -716,6 +716,24 @@ namespace InfimaGames.LowPolyShooterPack
 		}
 
 		/// <summary>
+		/// Unlocks the cursor so the player can click UI (team select). Called by ButtonColorSelecter.
+		/// </summary>
+		public void UnlockCursor()
+		{
+			cursorLocked = false;
+			UpdateCursorState();
+		}
+
+		/// <summary>
+		/// Locks the cursor back for gameplay. Called after the team is selected.
+		/// </summary>
+		public void LockCursor()
+		{
+			cursorLocked = true;
+			UpdateCursorState();
+		}
+
+		/// <summary>
 		/// Plays The Grenade Throwing Animation.
 		/// </summary>
 		private void PlayGrenadeThrow()

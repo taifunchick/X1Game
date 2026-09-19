@@ -1,37 +1,48 @@
-
 using UnityEngine;
 using Mirror;
 
-public class ColorChanger : NetworkBehaviour   // colour sync
+/// <summary>
+/// Красит капсулу игрока в цвет команды (красный/синий).
+/// Висит на дочернем объекте Capsule префаба P_LPSP_FP_CH (Renderer подхватится сам,
+/// если не назначен в инспекторе). Цвет хранится на сервере и синхронизируется всем клиентам.
+/// </summary>
+public class ColorChanger : NetworkBehaviour
 {
     [SerializeField] private Renderer _rend;
-    [SyncVar] [SerializeField] private Color _color;
 
-    private void Start()
+    [SyncVar(hook = nameof(OnColorChanged))]
+    [SerializeField] private Color _color = Color.white;
+
+    private void Awake()
     {
-        if (isServer) _color = Color.white;
+        if (_rend == null)
+            _rend = GetComponent<Renderer>();
     }
-    public override void OnStartClient()                   // _rend.material.color
+
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        // Пока команда не выбрана — капсула белая у всех.
+        _color = Color.white;
+        ApplyColor(_color);
+    }
+
+    public override void OnStartClient()
     {
         base.OnStartClient();
-        SetRender();
+        ApplyColor(_color);
     }
 
-    public void SetColor(Color color)
+    /// <summary>Вызывает клиент (кнопка выбора команды). Сервер разошлёт цвет всем.</summary>
+    public void SetColorByClient(Color color)
     {
-        _color = color;
-        RpcSetRender(color);
+        CmdSetColor(color);
     }
 
-    [ClientRpc]
-    private void RpcSetRender(Color color)
+    /// <summary>Покрасить по имени команды: "Red" — красный, "Blue" — синий.</summary>
+    public void SetTeamColorByClient(string teamName)
     {
-        _rend.material.color = color;
-    }
-
-    private void SetRender()
-    {
-        _rend.material.color = _color;
+        CmdSetColor(teamName == "Blue" ? Color.blue : Color.red);
     }
 
     [Command]
@@ -40,8 +51,28 @@ public class ColorChanger : NetworkBehaviour   // colour sync
         SetColor(color);
     }
 
-    public void SetColorByClient(Color color)
+    /// <summary>Меняет цвет на сервере (вызывать только на сервере).</summary>
+    [Server]
+    public void SetColor(Color color)
     {
-        CmdSetColor(color);
+        color.a = 1f; // всегда непрозрачный
+        _color = color; // SyncVar-hook сам применит цвет на хосте и клиентах
+        ApplyColor(_color);
+    }
+
+    private void OnColorChanged(Color oldValue, Color newValue)
+    {
+        ApplyColor(newValue);
+    }
+
+    private void ApplyColor(Color color)
+    {
+        if (_rend == null)
+            _rend = GetComponent<Renderer>();
+        if (_rend == null)
+            return;
+
+        color.a = 1f;
+        _rend.material.color = color;
     }
 }

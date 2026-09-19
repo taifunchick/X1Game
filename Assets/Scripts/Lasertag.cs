@@ -1,5 +1,6 @@
 using UnityEngine;
 using Mirror;
+using UnityEngine.EventSystems;
 
 public class Lasertag : NetworkBehaviour
 {
@@ -29,6 +30,8 @@ public class Lasertag : NetworkBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
+            // Клик по UI (выбор команды, кнопки) не должен стрелять.
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
             Shoot();
         }
     }
