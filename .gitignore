@@ -71,3 +71,10 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Crash dumps Unity/Mono leaves in the project root (10 MB each, useless in git)
+mono_crash*
+*.blob
+
+# Burst debug info Unity drops next to a build output
+*_BurstDebugInformation_DoNotShip/
