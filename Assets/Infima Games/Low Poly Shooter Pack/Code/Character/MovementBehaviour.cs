@@ -70,6 +70,15 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public abstract bool IsGrounded();
         /// <summary>
+        /// Returns true while this movement component is actively simulating its character, meaning that it
+        /// is enabled, and that everything it needs has been initialized.
+        /// Components that react to the character's movement (the Motions, for example) should check this
+        /// before reading movement values, because a character that is not being simulated locally has no
+        /// meaningful grounded/jumping state to react to. In a networked game this is the case for every
+        /// remote player, whose Movement component is disabled.
+        /// </summary>
+        public virtual bool IsSimulated() => isActiveAndEnabled;
+        /// <summary>
         /// Returns last frame's IsGrounded value.
         /// </summary>
         public abstract bool WasGrounded();

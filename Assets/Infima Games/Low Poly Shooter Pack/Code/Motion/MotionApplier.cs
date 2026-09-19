@@ -54,22 +54,41 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private void LateUpdate()
         {
+            //Cache. Our Awake may not have run yet if this object was just spawned, and we must not throw.
+            if (thisTransform == null)
+                thisTransform = transform;
+
             //Final Location.
             Vector3 finalLocation = default;
             //Final Euler Angles.
             Vector3 finaEulerAngles = default;
-            
-            //ForEach Motion.
-            motions.ForEach((motion =>
+
+            /*
+             * Loop backwards, so that we can safely forget about Motions that have been destroyed, which
+             * happens when a weapon is unequipped, or when a character is despawned. Ticking a destroyed
+             * Motion throws a MissingReferenceException, which would stop every other Motion from being
+             * applied this frame.
+             */
+            for (int i = motions.Count - 1; i >= 0; i--)
             {
+                //Get.
+                Motion motion = motions[i];
+
+                //Forget about destroyed Motions.
+                if (motion == null)
+                {
+                    motions.RemoveAt(i);
+                    continue;
+                }
+
                 //Tick.
                 motion.Tick();
-                
+
                 //Add Location.
                 finalLocation += motion.GetLocation() * motion.Alpha;
                 //Add Rotation.
                 finaEulerAngles += motion.GetEulerAngles() * motion.Alpha;
-            }));
+            }
 
             //Override Mode.
             if(applyMode == ApplyMode.Override)

@@ -22,12 +22,18 @@ namespace InfimaGames.LowPolyShooterPack
             return new Vector3
             {
                 //X.
-                x = animationCurves[0].Evaluate(time),
+                x = Evaluate(animationCurves[0], time),
                 //Y.
-                y = animationCurves[1].Evaluate(time),
+                y = Evaluate(animationCurves[1], time),
                 //Z.
-                z = animationCurves[2].Evaluate(time)
+                z = Evaluate(animationCurves[2], time)
             };
         }
+
+        /// <summary>
+        /// Evaluates a single curve, treating a missing curve as a flat zero value.
+        /// </summary>
+        private static float Evaluate(AnimationCurve animationCurve, float time)
+            => animationCurve != null ? animationCurve.Evaluate(time) : 0.0f;
     }
 }

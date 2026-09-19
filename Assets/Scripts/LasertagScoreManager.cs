@@ -52,9 +52,12 @@ public class LasertagScoreManager : NetworkBehaviour
     private void Refresh()
     {
         int r = 0, b = 0;
-        NetworkCombatPlayer[] players = FindObjectsOfType<NetworkCombatPlayer>();
-        foreach (var p in players)
+        // Список живых игроков ведёт сам NetworkCombatPlayer — это дешевле, чем FindObjectsOfType
+        // каждый кадр (тот ещё и мусорит в managed-куче).
+        var players = NetworkCombatPlayer.Instances;
+        for (int i = 0; i < players.Count; i++)
         {
+            var p = players[i];
             if (p == null) continue;
             if (p.team == "Red") r += p.hits;
             else if (p.team == "Blue") b += p.hits;

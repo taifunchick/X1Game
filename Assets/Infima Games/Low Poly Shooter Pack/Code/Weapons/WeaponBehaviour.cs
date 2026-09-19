@@ -1,11 +1,25 @@
 ﻿//Copyright 2022, Infima Games. All Rights Reserved.
 
+using System;
 using UnityEngine;
 
 namespace InfimaGames.LowPolyShooterPack
 {
     public abstract class WeaponBehaviour : MonoBehaviour
     {
+        #region EVENTS
+
+        /// <summary>
+        /// Raised every time this weapon fires a shot that actually consumed ammunition.
+        /// Gameplay code that needs to know about shots (networked hit registration, scoring, statistics...)
+        /// should subscribe to this instead of polling the fire button, so that it can never disagree with
+        /// the weapon about what was, and what was not, fired. Empty magazines, reloads, and the weapon's
+        /// rate of fire are all handled by the weapon itself, and therefore never reach subscribers.
+        /// </summary>
+        public event Action<WeaponBehaviour> ShotFired;
+
+        #endregion
+
         #region UNITY
 
         /// <summary>
@@ -192,6 +206,12 @@ namespace InfimaGames.LowPolyShooterPack
         /// Ejects a casing from the weapon. This is commonly called from animation events, but can be called from anywhere.
         /// </summary>
         public abstract void EjectCasing();
+
+        /// <summary>
+        /// Notifies everyone subscribed to ShotFired that this weapon just fired a real shot.
+        /// Implementations call this as soon as a bullet has been consumed.
+        /// </summary>
+        protected void NotifyShotFired() => ShotFired?.Invoke(this);
 
         #endregion
     }

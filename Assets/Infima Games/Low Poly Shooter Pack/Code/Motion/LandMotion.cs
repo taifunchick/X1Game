@@ -61,7 +61,7 @@ namespace InfimaGames.LowPolyShooterPack
         public override void Tick()
         {
             //Check References.
-            if (feelManager == null || movementBehaviour == null)
+            if (feelManager == null || feelManager.Preset == null || movementBehaviour == null)
             {
                 //ReferenceError.
                 Log.ReferenceError(this, gameObject);
@@ -69,18 +69,26 @@ namespace InfimaGames.LowPolyShooterPack
                 //Return.
                 return;
             }
-            
+
+            /*
+             * Skip characters whose movement is not being simulated, such as remote players in a networked
+             * game. Their grounded values never change, so this motion would otherwise trigger a landing
+             * every single frame.
+             */
+            if (!movementBehaviour.IsSimulated())
+                return;
+
             //Get Feel.
             Feel feel = feelManager.Preset.GetFeel(motionType);
             if (feel == null)
             {
                 //ReferenceError.
                 Log.ReferenceError(this, gameObject);
-                
+
                 //Return.
                 return;
             }
-            
+
             //Location.
             Vector3 location = default;
             //Rotation.
@@ -89,17 +97,21 @@ namespace InfimaGames.LowPolyShooterPack
             //We store the landing time.
             if (movementBehaviour.IsGrounded() && !movementBehaviour.WasGrounded())
                 landingTime = Time.time;
-            
+
             //We start playing the landing curves.
             playedCurves = feel.GetState(characterAnimator).LandingCurves;
 
             //Time where we evaluate the landing curves.
             float evaluateTime = Time.time - landingTime;
-                
-            //Evaluate Location Curves.
-            location += playedCurves.LocationCurves.EvaluateCurves(evaluateTime);
-            //Evaluate Rotation Curves.
-            rotation += playedCurves.RotationCurves.EvaluateCurves(evaluateTime);
+
+            //The Feel is allowed to have no landing curves at all.
+            if (playedCurves != null)
+            {
+                //Evaluate Location Curves.
+                location += playedCurves.LocationCurves.EvaluateCurves(evaluateTime);
+                //Evaluate Rotation Curves.
+                rotation += playedCurves.RotationCurves.EvaluateCurves(evaluateTime);
+            }
 
             //Evaluate Location Curves.
             springLocation.UpdateEndValue(location);

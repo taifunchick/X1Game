@@ -80,8 +80,12 @@ namespace InfimaGames.LowPolyShooterPack
             if (stopWhileFiring && characterBehaviour.IsHoldingButtonFire())
                 lowered = false;
             
-            //Make sure that the equipped weapon has a ItemAnimationDataBehaviour.
-            var animationData = inventoryBehaviour.GetEquipped().GetComponent<ItemAnimationDataBehaviour>();
+            //Make sure that the equipped weapon has a ItemAnimationDataBehaviour. There may be no weapon
+            //equipped at all, in which case there is nothing to lower.
+            WeaponBehaviour lowerWeaponEquipped = inventoryBehaviour.GetEquipped();
+            var animationData = lowerWeaponEquipped != null
+                ? lowerWeaponEquipped.GetComponent<ItemAnimationDataBehaviour>()
+                : null;
             if (animationData == null)
                 lowered = false;
             else

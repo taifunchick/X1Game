@@ -88,8 +88,16 @@ namespace InfimaGames.LowPolyShooterPack
             //Get the current FeelState value.
             feelState = feel.GetState(characterAnimator);
 
-            //Grab ScopeBehaviour.
-            ScopeBehaviour scopeBehaviour = inventoryBehaviour.GetEquipped().GetAttachmentManager().GetEquippedScope();
+            //Grab ScopeBehaviour. The weapon, its attachment manager, and the scope itself can all be
+            //missing (no weapon equipped yet, or a weapon without attachments), and we need the scope in
+            //order to know how much sway to apply.
+            WeaponBehaviour swayWeapon = inventoryBehaviour.GetEquipped();
+            WeaponAttachmentManagerBehaviour swayAttachmentManager =
+                swayWeapon != null ? swayWeapon.GetAttachmentManager() : null;
+            ScopeBehaviour scopeBehaviour =
+                swayAttachmentManager != null ? swayAttachmentManager.GetEquippedScope() : null;
+            if (scopeBehaviour == null)
+                return;
 
             //SwayData.
             SwayData swayData = feelState.SwayData;

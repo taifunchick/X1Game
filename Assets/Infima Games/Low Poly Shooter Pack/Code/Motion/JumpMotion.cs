@@ -57,7 +57,7 @@ namespace InfimaGames.LowPolyShooterPack
         public override void Tick()
         {
             //Check References.
-            if (feelManager == null || movementBehaviour == null)
+            if (feelManager == null || feelManager.Preset == null || movementBehaviour == null)
             {
                 //ReferenceError.
                 Log.ReferenceError(this, gameObject);
@@ -65,14 +65,23 @@ namespace InfimaGames.LowPolyShooterPack
                 //Return.
                 return;
             }
-            
+
+            /*
+             * Skip characters whose movement is not being simulated. This is the case for remote players in
+             * a networked game, where the Movement component stays disabled, and also for the very first
+             * frames of a freshly spawned character. Reading their grounded/jumping state would either
+             * throw, or make this motion believe that the character is falling forever.
+             */
+            if (!movementBehaviour.IsSimulated())
+                return;
+
             //Get Feel.
             Feel feel = feelManager.Preset.GetFeel(motionType);
             if (feel == null)
             {
                 //ReferenceError.
                 Log.ReferenceError(this, gameObject);
-                
+
                 //Return.
                 return;
             }
@@ -84,7 +93,7 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Current FeelState.
             FeelState state = feel.GetState(characterAnimator);
-            
+
             //Check Grounded.
             if (!movementBehaviour.IsGrounded())
             {
@@ -99,23 +108,28 @@ namespace InfimaGames.LowPolyShooterPack
 
                     //Jumping Curves.
                     ACurves jumpingCurves = state.JumpingCurves;
-                
-                    //Loop Jumping Location Curves.
-                    jumpingCurves.LocationCurves.ForEach(curve =>
+
+                    //The Feel may not have any jumping curves set up, in which case we simply cannot
+                    //know how long they would have played for.
+                    if (jumpingCurves != null)
                     {
-                        //Update length if needed, to match longest.
-                        if (curve.length > maxCurveLength)
-                            maxCurveLength = curve.length;
-                    });
-                    
-                    //Loop Jumping Rotation Curves.
-                    jumpingCurves.RotationCurves.ForEach(curve =>
-                    {
-                        //Update length if needed, to match longest.
-                        if (curve.length > maxCurveLength)
-                            maxCurveLength = curve.length;
-                    });
-                    
+                        //Loop Jumping Location Curves.
+                        jumpingCurves.LocationCurves.ForEach(curve =>
+                        {
+                            //Update length if needed, to match longest.
+                            if (curve != null && curve.length > maxCurveLength)
+                                maxCurveLength = curve.length;
+                        });
+
+                        //Loop Jumping Rotation Curves.
+                        jumpingCurves.RotationCurves.ForEach(curve =>
+                        {
+                            //Update length if needed, to match longest.
+                            if (curve != null && curve.length > maxCurveLength)
+                                maxCurveLength = curve.length;
+                        });
+                    }
+
                     //Check if the jumping curves should have finished playing by now.
                     if (Time.time - movementBehaviour.GetLastJumpTime() >= maxCurveLength)
                     {
@@ -126,7 +140,7 @@ namespace InfimaGames.LowPolyShooterPack
                     }
                     //Keep using the jumping curves.
                     else
-                        playedCurves = state.JumpingCurves;   
+                        playedCurves = jumpingCurves;
                 }
                 //Falling.
                 else
@@ -134,11 +148,15 @@ namespace InfimaGames.LowPolyShooterPack
                     //Use the falling curves, since the character hasn't jumped, so it must be falling!
                     playedCurves = state.FallingCurves;
                 }
-                
-                //Evaluate Location Curves.
-                location += playedCurves.LocationCurves.EvaluateCurves(airTime);
-                //Evaluate Rotation Curves.
-                rotation += playedCurves.RotationCurves.EvaluateCurves(airTime);
+
+                //The Feel is allowed to have no curves at all.
+                if (playedCurves != null)
+                {
+                    //Evaluate Location Curves.
+                    location += playedCurves.LocationCurves.EvaluateCurves(airTime);
+                    //Evaluate Rotation Curves.
+                    rotation += playedCurves.RotationCurves.EvaluateCurves(airTime);
+                }
             }
 
             //Update Spring Location Value.
