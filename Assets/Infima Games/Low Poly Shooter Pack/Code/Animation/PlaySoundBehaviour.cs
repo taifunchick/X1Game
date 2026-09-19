@@ -11,13 +11,11 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "Setup")]
         
         [Tooltip("AudioClip to play!")]
         [SerializeField]
         private AudioClip clip;
         
-        [Title(label: "Settings")]
 
         [Tooltip("Audio Settings.")]
         [SerializeField]

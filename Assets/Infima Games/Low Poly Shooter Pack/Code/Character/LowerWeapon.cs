@@ -13,7 +13,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "References")]
         
         [Tooltip("The character's Animator component.")]
         [SerializeField, NotNull]
@@ -33,7 +32,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField, NotNull]
         private CharacterBehaviour characterBehaviour;
 
-        [Title(label: "Settings")]
 
         [Tooltip("If true, the lowered state is stopped when the character starts firing.")]
         [SerializeField]

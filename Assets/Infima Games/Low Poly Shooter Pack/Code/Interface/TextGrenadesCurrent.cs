@@ -12,7 +12,6 @@ namespace InfimaGames.LowPolyShooterPack.Interface
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "Colors")]
         
         [Tooltip("Determines if the color of the text should changes as grenades are thrown.")]
         [SerializeField]

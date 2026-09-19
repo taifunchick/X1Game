@@ -13,7 +13,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "References")]
 
         [Tooltip("The character's Movement Behaviour component.")]
         [SerializeField, NotNull]
@@ -27,13 +26,11 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField, NotNull]
         private AudioSource audioSource;
 
-        [Title(label: "Settings")]
 
         [Tooltip("Minimum magnitude of the movement velocity at which the audio clips will start playing.")]
         [SerializeField]
         private float minVelocityMagnitude = 1.0f;
         
-        [Title(label: "Audio Clips")]
         
         [Tooltip("The audio clip that is played while walking.")]
         [SerializeField]

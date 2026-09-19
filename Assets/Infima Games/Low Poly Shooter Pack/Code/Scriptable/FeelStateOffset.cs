@@ -36,7 +36,6 @@ namespace InfimaGames.LowPolyShooterPack
         
         #region FIELDS SERIALIZED
         
-        [Title(label: "Location Offset")]
         
         [Tooltip("The location offset.")]
         [SerializeField]
@@ -46,7 +45,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         public SpringSettings springSettingsLocation = SpringSettings.Default();
 
-        [Title(label: "Rotation Offset")]
         
         [Tooltip("The rotation offset.")]
         [SerializeField]

@@ -45,26 +45,20 @@ namespace InfimaGames
     [Serializable]
     public struct SpringSettings
     {
-        [Title(label: "Spring")]
         
-        [BeginHorizontal(labelToWidthRatio: 0.15f)]
         [Tooltip("Determines how springy the spring is, the lower this value, the more bounce you will see.")]
         [Range(0.0f, 100.0f)]
         public float damping;
         
-        [EndHorizontal]
         [Tooltip("Determines how stiff the interpolation looks. The lower the value, the stiffer it becomes.")]
         [Range(0.0f, 200.0f)]
         public float stiffness;
         
-        [Title(label: "Modifiers")]
 
-        [BeginHorizontal(labelToWidthRatio: 0.15f)]
         [Tooltip("Determines how heavy the interpolation looks.")]
         [Range(0.0f, 100.0f)]
         public float mass;
 
-        [EndHorizontal]
         [Tooltip("Determines the speed of the interpolation. The higher the value, the faster the speed.")]
         [Range(1.0f, 10.0f)]
         public float speed;

@@ -14,13 +14,11 @@ namespace InfimaGames.LowPolyShooterPack.Interface
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "References")]
 
         [Tooltip("Text that gets modified when looking at something to pick up.")]
         [SerializeField]
         private TextMeshProUGUI textToModify;
         
-        [Title(label: "Setup")]
         
         [Tooltip("Name of the boolean to set when changing state.")]
         [SerializeField]

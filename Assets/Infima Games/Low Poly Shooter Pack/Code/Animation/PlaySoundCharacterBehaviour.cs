@@ -30,7 +30,6 @@ namespace InfimaGames.LowPolyShooterPack
 
         #region FIELDS SERIALIZED
 
-        [Title(label: "Setup")]
         
         [Tooltip("Delay at which the audio is played.")]
         [SerializeField]
@@ -40,7 +39,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private SoundType soundType;
         
-        [Title(label: "Audio Settings")]
 
         [Tooltip("Audio Settings.")]
         [SerializeField]

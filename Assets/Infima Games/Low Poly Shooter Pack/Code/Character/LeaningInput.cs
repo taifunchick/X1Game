@@ -12,7 +12,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "References")]
         
         [Tooltip("The character's CharacterBehaviour component.")]
         [SerializeField, NotNull]

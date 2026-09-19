@@ -13,13 +13,11 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "References")]
 
         [Tooltip("The Character Controller component.")]
         [SerializeField]
         private CharacterController characterController;
         
-        [Title(label: "Settings")]
         
         [Tooltip("The interpolation speed of the camera. Determines how smoothly the camera will " +
                  "transition to its new location.")]

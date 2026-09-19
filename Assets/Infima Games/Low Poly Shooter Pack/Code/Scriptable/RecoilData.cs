@@ -35,7 +35,6 @@ namespace InfimaGames.LowPolyShooterPack
         
         #region FIELDS SERIALIZED
 
-        [Title(label: "Standing State")]
         
         [Tooltip("Value to multiply the standingState location/rotation values by.")]
         [Range(0.0f, 1.0f)]
@@ -46,7 +45,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField, InLineEditor]
         private ACurves standingState;
 
-        [Title(label: "Aiming State")]
 
         [Tooltip("Value to multiply the aimingState location/rotation values by.")]
         [Range(0.0f, 1.0f)]

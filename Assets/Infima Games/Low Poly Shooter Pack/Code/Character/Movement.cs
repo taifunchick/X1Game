@@ -13,7 +13,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
         
-        [Title(label: "Acceleration")]
         
         [Tooltip("How fast the character's speed increases.")]
         [SerializeField]
@@ -27,7 +26,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float deceleration = 11.0f;
         
-        [Title(label: "Speeds")]
 
         [Tooltip("The speed of the player while walking.")]
         [SerializeField]
@@ -44,7 +42,6 @@ namespace InfimaGames.LowPolyShooterPack
         [Tooltip("How fast the player moves while running."), SerializeField]
         private float speedRunning = 6.8f;
         
-        [Title(label: "Walking Multipliers")]
         
         [Tooltip("Value to multiply the walking speed by when the character is moving forward."), SerializeField]
         [Range(0.0f, 1.0f)]
@@ -60,7 +57,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float walkingMultiplierBackwards = 1.0f;
         
-        [Title(label: "Air")]
 
         [Tooltip("How much control the player has over changes in direction while the character is in the air.")]
         [Range(0.0f, 1.0f)]
@@ -83,7 +79,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float stickToGroundForce = 0.03f;
 
-        [Title(label: "Crouching")]
 
         [Tooltip("Setting this to false will always block the character from crouching.")]
         [SerializeField]
@@ -106,7 +101,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField, ShowIf(nameof(canCrouch), true)]
         private LayerMask crouchOverlapsMask;
 
-        [Title(label: "Rigidbody Push")]
 
         [Tooltip("Force applied to other rigidbodies when walking into them. This force is multiplied by the character's " +
                  "velocity, so it is never applied by itself, that's important to note.")]

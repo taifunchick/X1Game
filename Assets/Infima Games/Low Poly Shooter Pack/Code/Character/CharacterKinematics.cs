@@ -13,13 +13,11 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "References")]
 
         [Tooltip("Reference to the character's Animator component.")]
         [SerializeField, NotNull]
         private Animator characterAnimator;
 
-        [Title(label: "Settings Arm Left")]
         
         [Tooltip("Left Arm Target. Determines what the IK target is.")]
         [SerializeField] 
@@ -39,7 +37,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private Transform[] armLeftHierarchy;
         
-        [Title(label: "Settings Arm Right")]
         
         [Tooltip("Left Arm Target. Determines what the IK target is.")]
         [SerializeField] 
@@ -59,7 +56,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private Transform[] armRightHierarchy;
 
-        [Title(label: "Generic")]
 
         [Tooltip("Hint.")]
         [SerializeField]

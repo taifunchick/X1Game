@@ -27,7 +27,6 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField, NotNull]
         private CharacterBehaviour characterBehaviour;
 
-        [Title(label: "Settings")]
 
         [Tooltip("The type of motion we want this component to apply.")]
         [SerializeField]

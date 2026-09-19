@@ -18,7 +18,6 @@ namespace InfimaGames.LowPolyShooterPack
     {
         #region FIELDS SERIALIZED
 
-        [Title(label: "Settings")]
 
         [Tooltip("Display name of the scene.")]
         [SerializeField]

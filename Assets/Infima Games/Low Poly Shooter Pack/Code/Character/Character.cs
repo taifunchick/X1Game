@@ -18,13 +18,11 @@ namespace InfimaGames.LowPolyShooterPack
 	{
 		#region FIELDS SERIALIZED
 
-		[Title(label: "References")]
 
 		[Tooltip("The character's LowerWeapon component.")]
 		[SerializeField]
 		private LowerWeapon lowerWeapon;
 		
-		[Title(label: "Inventory")]
 		
 		[Tooltip("Determines the index of the weapon to equip when the game starts.")]
 		[SerializeField]
@@ -34,7 +32,6 @@ namespace InfimaGames.LowPolyShooterPack
 		[SerializeField]
 		private InventoryBehaviour inventory;
 
-		[Title(label: "Grenade")]
 
 		[Tooltip("If true, the character's grenades will never run out.")]
 		[SerializeField]
@@ -52,13 +49,11 @@ namespace InfimaGames.LowPolyShooterPack
 		[SerializeField]
 		private GameObject grenadePrefab;
 		
-		[Title(label: "Knife")]
 		
 		[Tooltip("Knife GameObject.")]
 		[SerializeField]
 		private GameObject knife;
 
-		[Title(label: "Cameras")]
 
 		[Tooltip("Normal Camera.")]
 		[SerializeField]
@@ -68,7 +63,6 @@ namespace InfimaGames.LowPolyShooterPack
 		[SerializeField]
 		private Camera cameraDepth;
 
-		[Title(label: "Animation")]
 		
 		[Tooltip("Determines how smooth the turning animation is.")]
 		[SerializeField]
@@ -90,13 +84,11 @@ namespace InfimaGames.LowPolyShooterPack
 		[SerializeField]
 		private float aimingSpeedMultiplier = 1.0f;
 		
-		[Title(label: "Animation Procedural")]
 		
 		[Tooltip("Character Animator.")]
 		[SerializeField]
 		private Animator characterAnimator;
 
-		[Title(label: "Field Of View")]
 
 		[Tooltip("Normal world field of view.")]
 		[SerializeField]
@@ -110,7 +102,6 @@ namespace InfimaGames.LowPolyShooterPack
 		[SerializeField]
 		private float fieldOfViewWeapon = 55.0f;
 
-		[Title(label: "Audio Clips")]
 		
 		[Tooltip("Melee Audio Clips.")]
 		[SerializeField]
@@ -120,7 +111,6 @@ namespace InfimaGames.LowPolyShooterPack
 		[SerializeField]
 		private AudioClip[] audioClipsGrenadeThrow;
 
-		[Title(label: "Input Options")]
 
 		[Tooltip("If true, the running input has to be held to be active.")]
 		[SerializeField]
