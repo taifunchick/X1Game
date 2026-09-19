@@ -21,29 +21,32 @@ public class ButtonColorSelecter : NetworkBehaviour
         _player = GetLocalPlayer();
         if (_player == null)
         {
-            Debug.LogWarning("ButtonColorSelecter: local player not found when setting color.");
+            Debug.LogWarning("ButtonColorSelecter: local player not found when setting team.");
             return;
         }
 
         var colorChanger = _player.GetComponent<ColorChanger>();
         if (colorChanger == null)
         {
-            Debug.LogWarning("ButtonColorSelecter: ColorChanger component missing on local player.");
+            Debug.LogWarning("ButtonColorSelecter: ColorChanger component missing on local player (цвет персонажа не сменится, команда назначится).");
         }
         else
         {
             colorChanger.SetColorByClient(_color);
         }
 
+        // Красный/синий цвет кнопки = команда. В новом счёте (попадания, без убийств)
+        // команда нужна только чтобы считать общую статистику Red/Blue.
         string teamName = _color.b > _color.r ? "Blue" : "Red";
-        var lasertag = _player.GetComponent<Lasertag>();
-        if (lasertag == null)
+        var combat = _player.GetComponent<NetworkCombatPlayer>();
+        if (combat == null)
         {
-            Debug.LogWarning("ButtonColorSelecter: Lasertag component missing on local player.");
+            Debug.LogWarning("ButtonColorSelecter: NetworkCombatPlayer component missing on local player — команда не назначена.");
         }
         else
         {
-            lasertag.CmdSetTeam(teamName);
+            combat.CmdSetTeam(teamName);
+            Debug.Log($"ButtonColorSelecter: local player выбрал команду {teamName}.");
         }
 
         if (_colorSelecter != null)
