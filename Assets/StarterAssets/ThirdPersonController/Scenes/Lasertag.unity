@@ -1361,6 +1361,7 @@ GameObject:
   - component: {fileID: 1054942243}
   - component: {fileID: 1054942242}
   - component: {fileID: 1054942246}
+  - component: {fileID: 1054942247}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1479,6 +1480,23 @@ MonoBehaviour:
   redText: {fileID: 1249545299}
   blueText: {fileID: 465771445}
   myHitsText: {fileID: 9100000003}
+--- !u!114 &1054942247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1054942241}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
+  sceneId: 1898298811
+  _assetId: 0
+  serverOnly: 0
+  visibility: 0
+  hasSpawned: 0
 --- !u!1001 &1161319592
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5090,29 +5108,6 @@ MonoBehaviour:
   mainMenuScene: MainMenu
   endTime: 0
   finished: 0
---- !u!1660057539 &9223372036854775807
-SceneRoots:
-  m_ObjectHideFlags: 0
-  m_Roots:
-  - {fileID: 491821203}
-  - {fileID: 1909303107}
-  - {fileID: 122433009}
-  - {fileID: 1397975878}
-  - {fileID: 1827668029}
-  - {fileID: 668612028}
-  - {fileID: 1054942245}
-  - {fileID: 1625988758}
-  - {fileID: 1762641152}
-  - {fileID: 1161319592}
-  - {fileID: 829883237}
-  - {fileID: 1872843708}
-  - {fileID: 564990278}
-  - {fileID: 699113993}
-  - {fileID: 2082452122}
-  - {fileID: 189644257}
-  - {fileID: 39216355}
-  - {fileID: 1848060423}
-
 --- !u!1 &9100000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -5170,7 +5165,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u041C\u043E\u0438 \u043F\u043E\u043F\u0430\u0434\u0430\u043D\u0438\u044F: 0"
+  m_text: "\u041C\u043E\u0438 \u043F\u043E\u043F\u0430\u0434\u0430\u043D\u0438\u044F:
+    0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8a89fa14b10d46a99122fd4f73fca9a2, type: 2}
   m_sharedMaterial: {fileID: 2140474, guid: 8a89fa14b10d46a99122fd4f73fca9a2, type: 2}
@@ -5197,7 +5193,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 34.05
+  m_fontSize: 32.3
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -5250,3 +5246,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9100000001}
   m_CullTransparentMesh: 1
+--- !u!1660057539 &9223372036854775807
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 491821203}
+  - {fileID: 1909303107}
+  - {fileID: 122433009}
+  - {fileID: 1397975878}
+  - {fileID: 1827668029}
+  - {fileID: 668612028}
+  - {fileID: 1054942245}
+  - {fileID: 1625988758}
+  - {fileID: 1762641152}
+  - {fileID: 1161319592}
+  - {fileID: 829883237}
+  - {fileID: 1872843708}
+  - {fileID: 564990278}
+  - {fileID: 699113993}
+  - {fileID: 2082452122}
+  - {fileID: 189644257}
+  - {fileID: 39216355}
+  - {fileID: 1848060423}
