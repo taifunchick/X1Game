@@ -22,6 +22,6 @@ public class NetworkKillScoreUI : NetworkBehaviour {
    lastRed=r; lastBlue=b; lastMy=my;
    if(redText) redText.text=r.ToString();
    if(blueText) blueText.text=b.ToString();
-   if(myHitsText) myHitsText.text="Мои попадания: "+my;
+   if(myHitsText) myHitsText.text="My hits: "+my;
  }
 }

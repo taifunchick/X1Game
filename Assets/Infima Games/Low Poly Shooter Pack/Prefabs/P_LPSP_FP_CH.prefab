@@ -971,7 +971,6 @@ GameObject:
   - component: {fileID: 6561142636108398121}
   - component: {fileID: 3397589925919022971}
   - component: {fileID: 6522971708441607314}
-  - component: {fileID: -4346628446662353344}
   - component: {fileID: 1284652587205194061}
   - component: {fileID: 7516210969309117260}
   - component: {fileID: -2938132758106887252}
@@ -1732,24 +1731,6 @@ MonoBehaviour:
   positionSensitivity: 0.01
   rotationSensitivity: 0.01
   scaleSensitivity: 0.01
---- !u!114 &-4346628446662353344
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2751027687307977091}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 536ab92ce7431bc498520e9ec9b095e3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RosRobotController
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  moveSpeed: 5
-  turnSpeed: 100
-  gravity: -9.81
 --- !u!114 &1284652587205194061
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1772,6 +1753,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   fireOrigin: {fileID: 9079686574246692517}
+  minShotInterval: 0.05
   centerHeight: 1
   hitRadius: 0.5
   bodyHeight: 1.8
