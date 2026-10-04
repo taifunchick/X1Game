@@ -68,9 +68,9 @@ public class LasertagScoreManager : NetworkBehaviour
         _shownBlue = b;
 
         if (_redScoreText != null)
-            _redScoreText.text = $"Red: {r}";
+            _redScoreText.text = $"Красные: {r}";
         if (_blueScoreText != null)
-            _blueScoreText.text = $"Blue: {b}";
+            _blueScoreText.text = $"Синие: {b}";
     }
 
     /// Легаси-метод (использовала старая сценка Lasertag.cs). Основной счёт

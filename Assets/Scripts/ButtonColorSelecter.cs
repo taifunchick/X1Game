@@ -18,6 +18,17 @@ public class ButtonColorSelecter : NetworkBehaviour
 
     private void Start()
     {
+        // Команда уже выбрана кнопками MainMenu — панель выбора в сцене не нужна.
+        if (TeamSelection.HasSelection)
+        {
+            if (_colorSelecter != null)
+                _colorSelecter.SetActive(false);
+
+            _teamChosen = true;
+            HideCursor();
+            return;
+        }
+
         // Сцена только загрузилась, команда ещё не выбрана — показываем курсор.
         ShowCursor();
     }

@@ -85,6 +85,26 @@ public class NetworkCombatPlayer : NetworkBehaviour
     {
         base.OnStartLocalPlayer();
         EnsureWeaponSubscriptions();
+        ApplyPreselectedTeam();
+    }
+
+    /// <summary>
+    /// Команда, выбранная кнопками MainMenu (см. TeamSelection).
+    /// Вызывается, когда локальный игрок заспавнился: отправляем команду на сервер
+    /// и красим капсулу через ColorChanger. Если меню не использовалось
+    /// (прямой запуск сцены из редактора) — ничего не делаем, работает панель выбора в сцене.
+    /// </summary>
+    private void ApplyPreselectedTeam()
+    {
+        if (!TeamSelection.HasSelection)
+            return;
+
+        string teamName = TeamSelection.SelectedTeam;
+        CmdSetTeam(teamName);
+
+        var colorChanger = GetComponentInChildren<ColorChanger>();
+        if (colorChanger != null)
+            colorChanger.SetTeamColorByClient(teamName);
     }
 
     void OnDestroy()
@@ -262,15 +282,34 @@ public class NetworkCombatPlayer : NetworkBehaviour
         // 1) Raycast: если CharacterController виден для raycast, первый игрок на луче —
         //    и есть цель. Иначе raycast находит стену и выстрел не пролетает сквозь неё.
         float wallDistance = float.MaxValue;
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, mask, QueryTriggerInteraction.Ignore))
+        Vector3 rayOrigin = origin;
+        float rayLength = range;
+
+        //    Своих пропускаем: луч идёт сквозь союзника и может попасть в противника за ним.
+        while (rayLength > 0.01f &&
+               Physics.Raycast(rayOrigin, direction, out RaycastHit hit, rayLength, mask, QueryTriggerInteraction.Ignore))
         {
-            var target = hit.collider.GetComponentInParent<NetworkCombatPlayer>();
-            if (target != null && target != this)
+            var hitPlayer = hit.collider.GetComponentInParent<NetworkCombatPlayer>();
+
+            if (hitPlayer != null)
             {
-                RegisterHit(target);
-                return;
+                // Противник — попадание.
+                if (hitPlayer != this && !IsFriendly(hitPlayer))
+                {
+                    RegisterHit(hitPlayer);
+                    return;
+                }
+
+                // Союзник (или сам стрелок) — пропускаем и продолжаем луч чуть дальше него.
+                float step = hit.distance + 0.05f;
+                rayOrigin += direction * step;
+                rayLength -= step;
+                continue;
             }
-            wallDistance = hit.distance;
+
+            // Стена — выстрел сквозь неё не пролетает.
+            wallDistance = Vector3.Distance(origin, hit.point);
+            break;
         }
 
         // 2) У игрока нет коллайдера — геометрия: ищем ближайшего игрока, чьё тело
@@ -283,6 +322,9 @@ public class NetworkCombatPlayer : NetworkBehaviour
         {
             NetworkCombatPlayer other = instances[i];
             if (other == null || other == this) continue;
+
+            // По своим не стреляем: союзник не получает попадание и не закрывает цель.
+            if (IsFriendly(other)) continue;
 
             float dist = DistanceToBody(origin, direction, maxDistance, other);
             if (dist >= 0f && dist < closestDistance)
@@ -324,9 +366,26 @@ public class NetworkCombatPlayer : NetworkBehaviour
     }
 
     /// Сервер: стрелку +1. Здоровья и смерти нет — только попадания.
+    /// <summary>
+    /// Союзник — игрок того же цвета команды. Пока команда не выбрана (team пустая),
+    /// союзников нет: иначе до выбора команды нельзя было бы ни в кого попасть.
+    /// </summary>
+    bool IsFriendly(NetworkCombatPlayer other)
+    {
+        if (other == null || other == this) return false;
+        return !string.IsNullOrEmpty(team) && team == other.team;
+    }
+
     [Server]
     void RegisterHit(NetworkCombatPlayer victim)
     {
+        // Попадание по своему (тот же цвет команды) не засчитывается вообще.
+        if (IsFriendly(victim))
+        {
+            Debug.Log($"[Combat] {name} (team={team}) попал в своего ({victim.name}) — попадание не засчитано.");
+            return;
+        }
+
         hits++;
         Debug.Log($"[Combat] {name} (team={team}) попал в {victim.name}. Всего попаданий: {hits}");
     }

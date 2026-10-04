@@ -39,6 +39,12 @@ namespace InfimaGames.LowPolyShooterPack
         [Tooltip("The audio clip that is played while running.")]
         [SerializeField]
         private AudioClip audioClipRunning;
+
+        /// <summary>
+        /// True once we've complained about missing references. Update runs every frame, so complaining
+        /// on every one of them would flood the console and destroy the framerate.
+        /// </summary>
+        private bool loggedReferenceError;
         
         #endregion
         
@@ -49,6 +55,13 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private void Awake()
         {
+            //Resolve the references this prefab may be missing, so Update never has to complain about them.
+            //Update runs every frame, so complaining there floods the console and destroys the framerate.
+            if (movementBehaviour == null)
+                movementBehaviour = GetComponentInParent<MovementBehaviour>();
+            if (audioSource == null)
+                audioSource = GetComponent<AudioSource>();
+
             //Make sure we have an Audio Source assigned.
             if (audioSource != null)
             {
@@ -66,8 +79,15 @@ namespace InfimaGames.LowPolyShooterPack
             //Check for missing references.
             if (characterAnimator == null || movementBehaviour == null || audioSource == null)
             {
-                //Reference Error.
-                Log.ReferenceError(this, gameObject);
+                //Reference Error. Only once, so Update running every frame can never flood the console.
+                if (!loggedReferenceError)
+                {
+                    //Remember.
+                    loggedReferenceError = true;
+
+                    //Error.
+                    Log.ReferenceError(this, gameObject);
+                }
                 
                 //Return.
                 return;

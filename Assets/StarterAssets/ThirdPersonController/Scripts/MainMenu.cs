@@ -5,28 +5,24 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Главное меню: кнопки «Футбол» / «Лазертаг».
+/// Главное меню: выбор команды лазертага (Meteor/Red и Vympel/Blue).
+///
+/// Футбола в меню больше нет: сцена Football осталась в проекте и в Build Settings,
+/// но перейти на неё из меню нельзя. Обе кнопки ведут в сцену Lasertag,
+/// запоминая выбранную команду (см. TeamSelection).
 ///
 /// Сцену НЕ грузим сами через SceneManager.LoadScene — это делает Mirror через onlineScene
-/// (см. X1NetworkManager.StartGame). Раньше меню подписывалось на SceneManager.sceneLoaded,
-/// но объект меню уничтожался при смене сцены, OnDestroy снимал подписку, и StartHost/StartClient
-/// не вызывались вовсе — игрок оказывался в сцене без префаба.
+/// (см. X1NetworkManager.StartGame).
 /// </summary>
 public class MainMenu : MonoBehaviour
 {
     [Header("Настройки сцен")]
-    [Tooltip("Имя сцены футбола в Build Settings")]
-    [SerializeField] private string footballSceneName = "Football";
-
     [Tooltip("Имя сцены лазертага в Build Settings")]
     [SerializeField] private string lasertagSceneName = "Lasertag";
 
     [Header("Настройки сети")]
     [Tooltip("Адрес сервера для клиентов (localhost для локальных тестов, sv.x1team.ru для прода). Пусто — берётся Network Address из NetworkManager.")]
     [SerializeField] private string serverAddress = "localhost";
-
-    [Tooltip("Порт сервера футбола. 0 — порт транспорта по умолчанию (27777). Один выделенный сервер = одна сцена, поэтому у режимов могут быть разные порты.")]
-    [SerializeField] private ushort footballPort = 0;
 
     [Tooltip("Порт сервера лазертага. 0 — порт транспорта по умолчанию.")]
     [SerializeField] private ushort lasertagPort = 0;
@@ -45,9 +41,27 @@ public class MainMenu : MonoBehaviour
             Debug.LogWarning("MainMenu: NetworkManager не найден на сцене! Убедись, что он существует.");
     }
 
+    /// <summary>Кнопка красной команды (Meteor): запоминаем команду и идём в Lasertag.</summary>
+    public void OnRedTeamButtonClicked()
+    {
+        TeamSelection.Select(TeamSelection.Red);
+        StartGame(lasertagSceneName, lasertagPort);
+    }
+
+    /// <summary>Кнопка синей команды (Vympel): запоминаем команду и идём в Lasertag.</summary>
+    public void OnBlueTeamButtonClicked()
+    {
+        TeamSelection.Select(TeamSelection.Blue);
+        StartGame(lasertagSceneName, lasertagPort);
+    }
+
+    /// <summary>
+    /// Старого футбола больше нет: метод оставлен, чтобы не ронять сцену,
+    /// если где-то осталась ссылка на OnFootballButtonClicked. Ничего не запускает.
+    /// </summary>
     public void OnFootballButtonClicked()
     {
-        StartGame(footballSceneName, footballPort);
+        Debug.LogWarning("MainMenu: режим футбола убран из меню.");
     }
 
     public void OnLasertagButtonClicked()
@@ -124,6 +138,11 @@ public class MainMenu : MonoBehaviour
     public void DisconnectAndReturnToMenu()
     {
         NetworkManager manager = NetworkManager.singleton;
+
+        // Выход по кнопке — это осознанное решение игрока, автопереподключение тут не нужно.
+        if (manager is X1NetworkManager x1Manager)
+            x1Manager.DisableAutoReconnect();
+
         if (manager != null && (NetworkServer.active || NetworkClient.active))
         {
             if (NetworkServer.active && NetworkClient.active)

@@ -965,7 +965,6 @@ GameObject:
   - component: {fileID: 448958757}
   - component: {fileID: 2734684610955545649}
   - component: {fileID: 434113066}
-  - component: {fileID: 8163229473432397683}
   - component: {fileID: 4190955791512926966}
   - component: {fileID: 601192529242639950}
   - component: {fileID: 6561142636108398121}
@@ -974,6 +973,7 @@ GameObject:
   - component: {fileID: 1284652587205194061}
   - component: {fileID: 7516210969309117260}
   - component: {fileID: -2938132758106887252}
+  - component: {fileID: -6536326352388606332}
   m_Layer: 10
   m_Name: P_LPSP_FP_CH
   m_TagString: Player
@@ -1193,8 +1193,8 @@ MonoBehaviour:
   lowerWeapon: {fileID: 3901256427685847216}
   weaponIndexEquippedAtStart: 0
   inventory: {fileID: 8195332293463410009}
-  grenadesUnlimited: 0
-  grenadeTotal: 10
+  grenadesUnlimited: 1
+  grenadeTotal: 100000
   grenadeSpawnOffset: 1
   grenadePrefab: {fileID: 1948591290861370, guid: 7b04fe350ed10a741a1e245447860d9e,
     type: 3}
@@ -1221,22 +1221,6 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 058ad0f0e88b6054990c6e98008ae4ea, type: 3}
   holdToRun: 1
   holdToAim: 1
---- !u!114 &8163229473432397683
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2751027687307977091}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c2bd74ba84b94cd4bbb9b189a5e89fba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  canvasPrefab: {fileID: 5393623835024644669, guid: 48d7771c50bd625489d38055025597a3,
-    type: 3}
-  qualitySettingsPrefab: {fileID: 5965040680208419700, guid: 458b1dae88c7baf46a163b218ce42a30,
-    type: 3}
 --- !u!114 &4190955791512926966
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1278,9 +1262,9 @@ MonoBehaviour:
   m_ActionEvents:
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 434113066}
-        m_TargetAssemblyTypeName: InfimaGames.LowPolyShooterPack.Character, Assembly-CSharp
-        m_MethodName: OnTryFire
+      - m_Target: {fileID: -6536326352388606332}
+        m_TargetAssemblyTypeName: StarterAssets.StarterAssetsInputs, Assembly-CSharp
+        m_MethodName: OnShoot
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1776,7 +1760,7 @@ MonoBehaviour:
   - {fileID: 601192529242639950}
   - {fileID: 448958757}
   - {fileID: 434113066}
-  - {fileID: 8163229473432397683}
+  - {fileID: 0}
   - {fileID: 4190955791512926966}
   - {fileID: 6561142636108398121}
   - {fileID: 7954147704929373820}
@@ -1803,6 +1787,26 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _nameText: {fileID: 2028501674538029701}
+--- !u!114 &-6536326352388606332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2751027687307977091}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e087ecce43ebbff45a1b360637807d93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.StarterAssetsInputs
+  move: {x: 0, y: 0}
+  look: {x: 0, y: 0}
+  jump: 0
+  sprint: 0
+  shoot: 0
+  analogMovement: 0
+  cursorLocked: 1
+  cursorInputForLook: 1
 --- !u!1 &2906013363015915789
 GameObject:
   m_ObjectHideFlags: 0
@@ -2657,7 +2661,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 2a663e5b4b7e90747ba3c5a6dda99452, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4635,6 +4639,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 60135812283842780, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 60135812283842780, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 80100401030342568, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: m_Layer
@@ -4779,6 +4793,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 206871652657571402, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 206871652657571402, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 215172813554358403, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
@@ -5605,6 +5629,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 1336205423775232939, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1336205423775232939, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1364705570931274561, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: m_Layer
@@ -6099,6 +6133,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 2113768312870607030, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2113768312870607030, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2139698070364553663, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
@@ -8010,6 +8054,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 5069160595750692273, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5069160595750692273, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5083472910339749208, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: m_Layer
@@ -8385,6 +8439,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 5567679552925350123, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5567679552925350123, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5578287539154031706, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: m_Layer
@@ -8752,6 +8816,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6046589879588722185, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6046589879588722185, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6046589879588722185, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
       propertyPath: weaponOffsets.runningLocation.x
       value: 0.08
       objectReference: {fileID: 0}
@@ -8929,6 +9003,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 6306305043144894503, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6306305043144894503, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6313751023667887553, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
@@ -9351,6 +9435,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 7019589266253609496, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7019589266253609496, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7022615053740936348, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: m_Layer
@@ -9445,6 +9539,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 7126395202556731877, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7126395202556731877, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7129637501664986320, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
@@ -9946,6 +10050,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 7888240408129932584, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7888240408129932584, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7889308892428250637, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: m_Layer
@@ -10076,6 +10190,26 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 8111604114442987983, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8111604114442987983, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8123693601619948954, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8123693601619948954, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8123693601619948954, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
       propertyPath: weaponOffsets.runningLocation.x
@@ -10185,6 +10319,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 8234593458945141305, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8234593458945141305, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8246278217219449197, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
@@ -10318,6 +10462,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8387527928059221245, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8387527928059221245, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8387527928059221245, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
       propertyPath: weaponOffsets.runningLocation.x
       value: 0.08
       objectReference: {fileID: 0}
@@ -10430,6 +10584,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524413377780846853, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: canReloadWhenFull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524413377780846853, guid: 9482e0a2ae6a92742bbe72e00f29f763,
+        type: 3}
+      propertyPath: automaticReloadOnEmpty
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8524413377780846853, guid: 9482e0a2ae6a92742bbe72e00f29f763,
         type: 3}

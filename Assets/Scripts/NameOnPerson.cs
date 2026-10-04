@@ -2,17 +2,16 @@ using UnityEngine;
 using Mirror;
 using TMPro;
 
-public class NameOnPerson : NetworkBehaviour        // синх и вывод имени на перса вешается на канвас имени на пересе
+public class NameOnPerson : NetworkBehaviour
 {
-
-    [SyncVar(hook = nameof(OnNameChanged))] private string _name = "";
+    [SyncVar(hook = nameof(OnNameChanged))] private string _name = "Player";
 
     [SerializeField] private TextMeshProUGUI _nameText;
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        SetName(_name);
+        UpdateNameText(_name);
     }
 
     public override void OnStartLocalPlayer()
@@ -24,69 +23,54 @@ public class NameOnPerson : NetworkBehaviour        // синх и вывод и
 
     public void SetName(string newName)
     {
-        _name = newName;
-        _nameText.text = _name;
+        if (isLocalPlayer && isClient)
+        {
+            CmdSetName(newName);
+            return;
+        }
+
+        _name = NormalizeName(newName);
+        UpdateNameText(_name);
     }
 
     [Command]
     public void CmdSetName(string newName)
     {
-        _name = newName;
+        _name = NormalizeName(newName);
     }
 
-    void OnNameChanged(string oldName, string newName)
+    private void OnNameChanged(string oldName, string newName)
     {
-        _nameText.text = newName;
+        UpdateNameText(newName);
     }
-
-    void Start()
-    {
-        if (isLocalPlayer)
-        {
-string playerName = PlayerPrefs.GetString("name", "Player");
-            if (MaxAuthenticators.Instance != null && !string.IsNullOrWhiteSpace(MaxAuthenticators.Instance.playerName))
-                playerName = MaxAuthenticators.Instance.playerName;
-            CmdSetName(playerName);
-        }
-    }
-
-    /*
-    [SyncVar] private string _name = "Player";
-    [SerializeField] private TextMeshProUGUI _nameText;
 
     private void Start()
     {
-        if (!isLocalPlayer) return;
-        
-        _name = PlayerPrefs.GetString("name");
-        _nameText.text = _name;
-        
-        CmdSetName(_name);
+        if (!isLocalPlayer)
+            return;
+
+        string playerName = PlayerPrefs.GetString("name", "Player");
+        if (MaxAuthenticators.Instance != null && !string.IsNullOrWhiteSpace(MaxAuthenticators.Instance.playerName))
+            playerName = MaxAuthenticators.Instance.playerName;
+
+        CmdSetName(playerName);
     }
 
-    public override void OnStartClient()
+    private static string NormalizeName(string name)
     {
-        if (isLocalPlayer) return;
-        base.OnStartClient();
-        SetName();
-    }
-    private void SetName()
-    {
-        _nameText.text = _name;
+        if (string.IsNullOrWhiteSpace(name))
+            return "Player";
+
+        return name.Trim();
     }
 
-    [Command] 
-    private void CmdSetName(string name) 
+    private void UpdateNameText(string name)
     {
-        _name = name;
-        RpcSetName();
-    }
+        if (_nameText == null)
+            return;
 
-    [ClientRpc]
-    private void RpcSetName()
-    {
-        SetName();
-    }*/
+        _nameText.text = NormalizeName(name);
+    }
 }
 
 

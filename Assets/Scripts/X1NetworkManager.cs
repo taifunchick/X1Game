@@ -25,12 +25,33 @@ public class X1NetworkManager : NetworkManager
 {
     [Header("X1")]
     [Tooltip("Сцена, которую грузит выделенный сервер, если не передан аргумент командной строки -scene <имя>")]
-    public string defaultServerScene = "Football";
+    public string defaultServerScene = "Lasertag";
 
     [Tooltip("Сколько секунд клиент ждёт сцену от сервера после подключения. Если сервер так и не прислал сцену — отключаемся с понятной ошибкой вместо вечного ожидания.")]
     public float sceneMessageTimeout = 15f;
 
+    [Tooltip("Сколько раз автоматически переподключаться после неожиданного обрыва. " +
+             "В WebGL браузер рвёт WebSocket, когда вкладка уходит в фоновый режим (Back-Forward Cache), " +
+             "и без автопереподключения игра просто «зависает». 0 — не переподключаться.")]
+    public int maxReconnectAttempts = 5;
+
+    [Tooltip("Пауза перед очередной попыткой переподключения, секунды. Растёт с каждой попыткой.")]
+    public float reconnectBaseDelay = 2f;
+
     private Coroutine _sceneWatchdog;
+    private Coroutine _reconnectRoutine;
+
+    // Какое подключение мы хотим держать — чтобы переподключиться после обрыва,
+    // не заставляя игрока снова нажимать кнопку в меню.
+    private string _desiredScene;
+    private bool _desiredAsHost;
+    private string _desiredAddress;
+    private ushort _desiredPort;
+    private int _reconnectAttempts;
+
+    // Ставится в true при успешном StartGame и сбрасывается, когда игрок сам
+    // нажал «выйти» — тогда автоматически подключаться обратно не нужно.
+    private bool _autoReconnectEnabled;
 
     #region Запуск игры
 
@@ -67,6 +88,9 @@ public class X1NetworkManager : NetworkManager
             networkAddress = address;
 
         ApplyPort(port);
+
+        CancelReconnect();
+        RememberDesiredConnection(scenePath, asHost, address, port);
 
         if (asHost)
         {
@@ -264,6 +288,8 @@ public class X1NetworkManager : NetworkManager
         StopSceneWatchdog();
         Debug.Log("[X1NetworkManager] Отключились от сервера.");
         base.OnClientDisconnect();
+
+        ScheduleReconnect("Соединение потеряно: вкладка браузера ушла в фоновый режим или сервер закрыл соединение.");
     }
 
     public override void OnClientError(TransportError error, string reason)
@@ -275,6 +301,7 @@ public class X1NetworkManager : NetworkManager
     public override void OnStopClient()
     {
         StopSceneWatchdog();
+        CancelReconnect();
         base.OnStopClient();
     }
 
@@ -292,8 +319,14 @@ public class X1NetworkManager : NetworkManager
         if (NetworkClient.isConnected && !NetworkClient.ready)
         {
             Debug.LogError($"[X1NetworkManager] Сервер за {sceneMessageTimeout:0} сек. не прислал игровую сцену. " +
-                           "Скорее всего сервер стоит в сцене меню (запущен без -scene или со старой сборкой). Отключаемся.");
+                           "Скорее всего сервер запущен без '-scene Lasertag' или собран из старой версии проекта, " +
+                           "поэтому он остался в сцене меню и не знает, какую сцену прислать клиенту.");
+
             StopClient();
+
+            // Сервер мог просто перезапускаться — клиент переподключится сам,
+            // как только тот снова поднимется.
+            ScheduleReconnect("Сервер не прислал игровую сцену.");
         }
     }
 
@@ -304,6 +337,136 @@ public class X1NetworkManager : NetworkManager
             StopCoroutine(_sceneWatchdog);
             _sceneWatchdog = null;
         }
+    }
+
+    #endregion
+
+    #region Автопереподключение
+
+    private void RememberDesiredConnection(string scenePath, bool asHost, string address, ushort port)
+    {
+        _desiredScene = scenePath;
+        _desiredAsHost = asHost;
+        _desiredAddress = string.IsNullOrWhiteSpace(address) ? networkAddress : address;
+        _desiredPort = port;
+        _reconnectAttempts = 0;
+        _autoReconnectEnabled = true;
+    }
+
+    /// <summary>Игрок сам вышел из игры — больше не подключаемся автоматически.</summary>
+    public void DisableAutoReconnect()
+    {
+        _autoReconnectEnabled = false;
+        _desiredScene = null;
+        CancelReconnect();
+    }
+
+    public void CancelReconnect()
+    {
+        if (_reconnectRoutine == null)
+            return;
+
+        StopCoroutine(_reconnectRoutine);
+        _reconnectRoutine = null;
+    }
+
+    private void ScheduleReconnect(string reason)
+    {
+        // Хост и выделенный сервер не переподключаем: там обрыв означает падение.
+        if (!_autoReconnectEnabled || _desiredScene == null || _desiredAsHost)
+            return;
+
+        if (_reconnectAttempts >= maxReconnectAttempts)
+        {
+            Debug.LogWarning($"[X1NetworkManager] {reason} Больше не пытаемся переподключиться " +
+                             $"({maxReconnectAttempts} попыток). Вернитесь в меню и нажмите подключение ещё раз.");
+            _autoReconnectEnabled = false;
+            return;
+        }
+
+        CancelReconnect();
+        _reconnectRoutine = StartCoroutine(ReconnectRoutine(reason));
+    }
+
+    private IEnumerator ReconnectRoutine(string reason)
+    {
+        _reconnectAttempts++;
+        float delay = reconnectBaseDelay * _reconnectAttempts;
+
+        Debug.Log($"[X1NetworkManager] {reason} Повторное подключение через {delay:0.#} сек. " +
+                  $"(попытка {_reconnectAttempts}/{maxReconnectAttempts}).");
+
+        // Сначала даём Mirror полностью остановиться, иначе StartGame вернёт false.
+        float waitDeadline = Time.realtimeSinceStartup + 10f;
+        while ((NetworkServer.active || NetworkClient.active) && Time.realtimeSinceStartup < waitDeadline)
+            yield return null;
+
+        float deadline = Time.realtimeSinceStartup + delay;
+        while (Time.realtimeSinceStartup < deadline)
+            yield return null;
+
+        if (Application.internetReachability == NetworkReachability.NotReachable)
+        {
+            Debug.LogWarning("[X1NetworkManager] Сети нет — переподключение отменено.");
+            _reconnectRoutine = null;
+            yield break;
+        }
+
+        // После обрыва Mirror мог оставить нас в игровой сцене — вернёмся в меню,
+        // иначе клиент подключится поверх старой сцены.
+        yield return ReturnToOfflineScene();
+
+        string scene = _desiredScene;
+        bool host = _desiredAsHost;
+        string address = _desiredAddress;
+        ushort port = _desiredPort;
+
+        // Обнуляем заранее: StartGame() сам вызывает CancelReconnect().
+        _reconnectRoutine = null;
+
+        StartGame(scene, host, address, port);
+    }
+
+    /// <summary>Возвращает клиента в offlineScene, если Mirror её настроил.</summary>
+    private IEnumerator ReturnToOfflineScene()
+    {
+        if (string.IsNullOrWhiteSpace(offlineScene))
+            yield break;
+
+        string path = ResolveScenePath(offlineScene);
+        if (path == null || path == SceneManager.GetActiveScene().path)
+            yield break;
+
+        Debug.Log($"[X1NetworkManager] Возвращаемся в '{offlineScene}' перед переподключением.");
+
+        AsyncOperation load = SceneManager.LoadSceneAsync(path);
+        while (load != null && !load.isDone)
+            yield return null;
+    }
+
+    private void OnApplicationPause(bool paused) => HandleBrowserResume(!paused);
+
+    private void OnApplicationFocus(bool hasFocus) => HandleBrowserResume(hasFocus);
+
+    /// <summary>
+    /// В WebGL при возврате на вкладку браузер отдаёт уже мёртвый WebSocket
+    /// («Page entered Back-Forward Cache»). Mirror узнаёт об этом не сразу, поэтому
+    /// проверяем соединение сами и переподключаемся.
+    /// </summary>
+    private void HandleBrowserResume(bool resumed)
+    {
+        if (!resumed || !_autoReconnectEnabled || _desiredScene == null || _desiredAsHost)
+            return;
+
+        if (NetworkClient.isConnected)
+            return;
+
+        Debug.LogWarning("[X1NetworkManager] Вернулись на вкладку, а соединения нет — переподключаемся.");
+
+        if (NetworkClient.active || NetworkServer.active)
+            StopClient();
+
+        ScheduleReconnect("Соединение не пережило уход вкладки в фоновый режим.");
     }
 
     #endregion

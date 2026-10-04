@@ -1083,6 +1083,63 @@ namespace InfimaGames.LowPolyShooterPack
 			}
 		}
 		/// <summary>
+		/// Same as OnTryFire, but without an InputAction.CallbackContext. Called by
+		/// StarterAssetsInputs when its shoot flag changes — the shoot button lives there now.
+		/// Press = start holding + fire one shot (non-automatic), release = stop holding.
+		/// Keep this in sync with OnTryFire.
+		/// </summary>
+		public void SetFireInput(bool pressed)
+		{
+			//Block while the cursor is unlocked.
+			if (!cursorLocked)
+				return;
+
+			//Released — stop holding the firing button.
+			if (!pressed)
+			{
+				//Stop Hold.
+				holdingButtonFire = false;
+
+				//Reset shotsFired.
+				shotsFired = 0;
+				return;
+			}
+
+			//Hold.
+			holdingButtonFire = true;
+
+			//Restart the shots.
+			shotsFired = 0;
+
+			//Nothing to fire with (the inventory may not be ready yet).
+			if (equippedWeapon == null)
+				return;
+
+			//Ignore if we're not allowed to actually fire.
+			if (!CanPlayAnimationFire())
+				return;
+
+			//Check.
+			if (equippedWeapon.HasAmmunition())
+			{
+				//Automatic weapons keep firing from Update() while the button is held.
+				if (equippedWeapon.IsAutomatic())
+				{
+					//Reset fired shots, so recoil/spread does not just stay at max when we've run out
+					//of ammo already!
+					shotsFired = 0;
+					return;
+				}
+
+				//Has fire rate passed.
+				if (Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+					Fire();
+			}
+			//Fire Empty.
+			else
+				FireEmpty();
+		}
+		/// <summary>
 		/// Reload.
 		/// </summary>
 		public void OnTryPlayReload(InputAction.CallbackContext context)

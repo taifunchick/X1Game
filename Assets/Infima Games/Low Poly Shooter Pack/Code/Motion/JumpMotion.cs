@@ -46,11 +46,34 @@ namespace InfimaGames.LowPolyShooterPack
         /// Represents the curves currently being played by this component.
         /// </summary>
         private ACurves playedCurves;
+
+        /// <summary>
+        /// True once we've complained about missing references. Tick runs every single frame through the
+        /// MotionApplier, so complaining on every tick would flood the console and destroy the framerate.
+        /// </summary>
+        private bool loggedReferenceError;
         
         #endregion
         
         #region METHODS
         
+        /// <summary>
+        /// Awake.
+        /// </summary>
+        protected override void Awake()
+        {
+            //Base. This subscribes us to the MotionApplier.
+            base.Awake();
+
+            //Resolve the references this prefab may be missing, exactly like Motion.Awake resolves its
+            //MotionApplier. Tick is called every frame, so a missing reference here used to flood the
+            //console, and the framerate with it.
+            if (movementBehaviour == null)
+                movementBehaviour = GetComponentInParent<MovementBehaviour>();
+            if (feelManager == null && transform.root != null)
+                feelManager = transform.root.GetComponentInChildren<FeelManager>(true);
+        }
+
         /// <summary>
         /// Tick.
         /// </summary>
@@ -59,8 +82,15 @@ namespace InfimaGames.LowPolyShooterPack
             //Check References.
             if (feelManager == null || feelManager.Preset == null || movementBehaviour == null)
             {
-                //ReferenceError.
-                Log.ReferenceError(this, gameObject);
+                //ReferenceError. Only once, so a Tick that runs every frame can never flood the console.
+                if (!loggedReferenceError)
+                {
+                    //Remember.
+                    loggedReferenceError = true;
+
+                    //Error.
+                    Log.ReferenceError(this, gameObject);
+                }
 
                 //Return.
                 return;
@@ -79,8 +109,15 @@ namespace InfimaGames.LowPolyShooterPack
             Feel feel = feelManager.Preset.GetFeel(motionType);
             if (feel == null)
             {
-                //ReferenceError.
-                Log.ReferenceError(this, gameObject);
+                //ReferenceError. Only once.
+                if (!loggedReferenceError)
+                {
+                    //Remember.
+                    loggedReferenceError = true;
+
+                    //Error.
+                    Log.ReferenceError(this, gameObject);
+                }
 
                 //Return.
                 return;
