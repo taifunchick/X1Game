@@ -135,25 +135,22 @@ public class X1NetworkManager : NetworkManager
 
     private void ConfigureDedicatedServer()
     {
-        // В production у нас часто нет доступа менять unit-файл на сервере. Поэтому
-        // приоритет сохраняем стабильным: сначала onlineScene из инспектора, затем
-        // defaultServerScene и только после этого аргумент -scene. Это позволяет
-        // серверу нормально стартовать без -scene, если сцену уже назначили в NetworkManager.
         string scenePath = null;
 
-        if (!string.IsNullOrWhiteSpace(onlineScene))
+        // Если передан явный аргумент командной строки -scene <имя>, используем его
+        string requestedScene = CommandLineArg("-scene");
+        if (!string.IsNullOrWhiteSpace(requestedScene))
+        {
+            scenePath = ResolveScenePath(requestedScene);
+            if (scenePath == null)
+                Debug.LogWarning($"[X1NetworkManager] Сцена '{requestedScene}' из аргумента -scene не найдена в Build Settings. Проверяем onlineScene / defaultServerScene.");
+        }
+
+        if (scenePath == null && !string.IsNullOrWhiteSpace(onlineScene))
             scenePath = ResolveScenePath(onlineScene);
 
         if (scenePath == null)
             scenePath = ResolveScenePath(defaultServerScene);
-
-        string requestedScene = CommandLineArg("-scene");
-        if (scenePath == null && !string.IsNullOrWhiteSpace(requestedScene))
-        {
-            scenePath = ResolveScenePath(requestedScene);
-            if (scenePath == null)
-                Debug.LogError($"[X1NetworkManager] Сцена '{requestedScene}' из аргумента -scene не найдена в Build Settings. Используем сцену по умолчанию.");
-        }
 
         if (scenePath == null)
         {
