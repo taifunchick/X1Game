@@ -25,6 +25,12 @@ public class UIVirtualButton : MonoBehaviour, IPointerDownHandler, IPointerUpHan
     
     public void OnPointerClick(PointerEventData eventData)
     {
+        bool isCurrentPointerTarget = eventData.pointerPress == gameObject ||
+                                     eventData.pointerCurrentRaycast.gameObject == gameObject;
+
+        if (!isCurrentPointerTarget)
+            return;
+
         OutputButtonClickEvent();
     }
 

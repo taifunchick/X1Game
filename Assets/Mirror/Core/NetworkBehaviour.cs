@@ -280,9 +280,16 @@ namespace Mirror
                 // isServer / isClient would still be false.
                 // so we need to check NetworkServer/Client.active here instead.
 
-                // host mode: any ServerToClient and any local client owned
+                // host mode: any ServerToClient and any local client owned.
+                // if the object hasn't been spawned yet, allow writes anyway.
+                // this matches the pre-spawn client-only behavior and avoids
+                // rejecting sync objects during setup / character previews.
                 if (NetworkServer.active && NetworkClient.active)
+                {
+                    if (netId == 0)
+                        return true;
                     return syncDirection == SyncDirection.ServerToClient || isOwned;
+                }
 
                 // server only: any ServerToClient
                 if (NetworkServer.active)
@@ -315,11 +322,17 @@ namespace Mirror
                 // carefully check each mode separately to ensure correct results.
                 // fixes: https://github.com/MirrorNetworking/Mirror/issues/3342
 
-                // host mode: only if observed
-                if (isServer && isClient) return netIdentity.observers.Count > 0;
+                // host mode: only if observed.
+                // unspawned objects should not record changes yet.
+                if (isServer && isClient)
+                {
+                    if (netId == 0 || netIdentity == null || netIdentity.observers == null)
+                        return false;
+                    return netIdentity.observers.Count > 0;
+                }
 
                 // server only: only if observed
-                if (isServer) return netIdentity.observers.Count > 0;
+                if (isServer) return netIdentity != null && netIdentity.observers != null && netIdentity.observers.Count > 0;
 
                 // client only: only ClientToServer and owned
                 if (isClient) return syncDirection == SyncDirection.ClientToServer && isOwned;

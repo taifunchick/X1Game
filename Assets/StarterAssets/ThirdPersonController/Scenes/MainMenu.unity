@@ -545,7 +545,7 @@ MonoBehaviour:
   editorAutoStart: 0
   sendRate: 30
   offlineScene: Assets/StarterAssets/ThirdPersonController/Scenes/MainMenu.unity
-  onlineScene: 
+  onlineScene: Assets/StarterAssets/ThirdPersonController/Scenes/Lasertag.unity
   offlineSceneLoadDelay: 0
   transport: {fileID: 719433185}
   networkAddress: sv.x1team.ru
@@ -580,6 +580,8 @@ MonoBehaviour:
   timeInterpolationGui: 0
   defaultServerScene: Lasertag
   sceneMessageTimeout: 15
+  maxReconnectAttempts: 5
+  reconnectBaseDelay: 2
 --- !u!4 &719433188
 Transform:
   m_ObjectHideFlags: 0
@@ -807,6 +809,51 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1018398394}
   m_CullTransparentMesh: 1
+--- !u!1 &1184134875
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1184134877}
+  - component: {fileID: 1184134876}
+  m_Layer: 0
+  m_Name: AuthManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1184134876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1184134875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e93ab0eaa4ef38b4ba0839d1e385cf62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MaxAuthenticators
+  playerName: Guest
+--- !u!4 &1184134877
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1184134875}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2158.2468, y: 0, z: 27534.598}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1326160386
 GameObject:
   m_ObjectHideFlags: 0
@@ -1505,3 +1552,4 @@ SceneRoots:
   - {fileID: 1326160390}
   - {fileID: 580441298}
   - {fileID: 719433188}
+  - {fileID: 1184134877}

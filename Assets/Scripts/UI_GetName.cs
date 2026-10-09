@@ -19,10 +19,14 @@ public class UI_GetName : MonoBehaviour     //для получения имен
     private string _name;
     private void Start()
     {
-        if (PlayerPrefs.GetString("name") != null)
+        if (PlayerPrefs.HasKey("name"))
         {
-            _inputField.text = PlayerPrefs.GetString("name");  
-            _name = PlayerPrefs.GetString("name");
+            string savedName = PlayerPrefs.GetString("name", "");
+            if (!string.IsNullOrWhiteSpace(savedName))
+            {
+                _inputField.text = savedName;
+                _name = savedName;
+            }
         }
 
 #if UNITY_WEBGL 
@@ -33,7 +37,7 @@ public class UI_GetName : MonoBehaviour     //для получения имен
             _inputField.text = getUserNickname();
             _name = getUserNickname();
         }
-        else
+        else if (string.IsNullOrEmpty(_inputField.text))
         {
             _inputField.text = "Player1";
             _name = "Player1";

@@ -17,7 +17,15 @@ public static class TeamSelection
 
     public static void Select(string teamName)
     {
-        SelectedTeam = teamName == Blue ? Blue : Red;
+        string normalized = string.IsNullOrWhiteSpace(teamName) ? "" : teamName.Trim();
+
+        if (string.Equals(normalized, Blue, System.StringComparison.OrdinalIgnoreCase))
+            SelectedTeam = Blue;
+        else if (string.Equals(normalized, Red, System.StringComparison.OrdinalIgnoreCase))
+            SelectedTeam = Red;
+        else
+            SelectedTeam = "";
+
         Debug.Log($"TeamSelection: выбрана команда {SelectedTeam}.");
     }
 

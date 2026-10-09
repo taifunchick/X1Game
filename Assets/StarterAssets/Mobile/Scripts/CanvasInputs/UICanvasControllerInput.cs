@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Mirror;
 using UnityEngine;
 using InfimaGames.LowPolyShooterPack;
@@ -35,15 +36,114 @@ namespace StarterAssets
 
         [SerializeField] private float cameraJoystickSensivity = 1f;
 
+        [Header("Editor debug")]
+        [Tooltip("Для теста мобильного UI в редакторе/на ПК. В новой логике редактор всегда показывает мобильный UI, а ПК-билд — нет.")]
+        public bool forceShowMobileControlsInEditor = true;
+
+        [Header("Mobile root")]
+        [Tooltip("Если назначить сюда отдельный корневой объект мобильного UI, скрипт будет включать/выключать именно его, а не сам компонент. Если оставить пустым — сам объект не будет выключаться автоматически.")]
+        public GameObject mobileRoot;
+
+        // ---------------------------------------------------------------------
+        // WebGL: определение мобильного браузера через .jslib
+        // ---------------------------------------------------------------------
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern int IsMobileBrowser();
+#endif
+
+        private static bool DetectWebGLMobileBrowser()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            try
+            {
+                return IsMobileBrowser() == 1;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[UICanvasControllerInput] IsMobileBrowser() failed: " + e.Message);
+                return false;
+            }
+#else
+            return false;
+#endif
+        }
+
+        private GameObject GetMobileRoot()
+        {
+            return mobileRoot != null ? mobileRoot : gameObject;
+        }
+
+        private bool ShouldShowMobileControls()
+        {
+            // В редакторе мобильный UI должен быть виден для тестов (управляется флагом).
+            if (Application.isEditor)
+                return forceShowMobileControlsInEditor;
+
+            // На реальном мобильном устройстве — всегда показываем.
+            if (Application.isMobilePlatform)
+                return true;
+
+            if (SystemInfo.deviceType == DeviceType.Handheld)
+                return true;
+
+            if (Application.platform == RuntimePlatform.Android ||
+                Application.platform == RuntimePlatform.IPhonePlayer)
+                return true;
+
+            // WebGL: спрашиваем у браузера.
+            if (Application.platform == RuntimePlatform.WebGLPlayer)
+                return DetectWebGLMobileBrowser();
+
+            // На ПК/десктопе — мобильный HUD выключен.
+            return false;
+        }
+
         private void Awake()
         {
             CacheCharacterFields();
+            ApplyMobileControlsVisibility();
+        }
 
-            // На ПК виртуальный интерфейс не нужен. Раньше проверка была в OnStartClient,
-            // но объект не спавнится по сети (hasSpawned = 0), поэтому колбэк не вызывался
-            // и канвас с виртуальными кнопками показывался даже на компьютере.
-            if (!Application.isMobilePlatform)
-                gameObject.SetActive(false);
+        private void Start()
+        {
+            ApplyMobileControlsVisibility();
+        }
+
+        private void OnEnable()
+        {
+            ApplyMobileControlsVisibility();
+        }
+
+        protected override void OnValidate()
+        {
+            base.OnValidate();
+            ApplyMobileControlsVisibility();
+        }
+
+        private void ApplyMobileControlsVisibility()
+        {
+            bool shouldBeActive = ShouldShowMobileControls();
+            GameObject root = GetMobileRoot();
+
+            if (root == null)
+                return;
+
+            if (root == gameObject)
+            {
+                // Если mobileRoot не назначен, скрипт не должен форсировать активность
+                // всего Canvas'а или некой родительской иерархии. Это мешает сцене
+                // корректно управлять видимостью интерфейса.
+                if (gameObject.activeSelf != shouldBeActive)
+                    gameObject.SetActive(shouldBeActive);
+                return;
+            }
+
+            // Важно: не включать родительские объекты по цепочке и не форсировать
+            // весь canvas в active=true. Если в сцене корневой Canvas/Panel специально
+            // скрыт, этот скрипт не должен переопределять это состояние.
+            if (root.activeSelf != shouldBeActive)
+                root.SetActive(shouldBeActive);
         }
 
         public override void OnStartClient()
@@ -54,6 +154,11 @@ namespace StarterAssets
 
         private void Update()
         {
+            ApplyMobileControlsVisibility();
+
+            if (!ShouldShowMobileControls())
+                return;
+
             ResolveLocalPlayer();
         }
 
@@ -129,10 +234,12 @@ namespace StarterAssets
 
         /// <summary>
         /// Бег в Infima: персонаж сам считает running = holdingButtonRun && CanRun(),
-        /// поэтому достаточно выставить этот флаг — ровно как это делает OnTryRun.
+        /// поэтому достаточно выставить этот флаг — ровно как это делает OnTryRun
         /// </summary>
         private void ApplyCharacterRun(bool input)
         {
+            EnsureCursorLocked();
+
             if (character == null || holdingButtonRunField == null)
                 return;
 
@@ -144,7 +251,7 @@ namespace StarterAssets
             Vector2 move = Vector2.ClampMagnitude(virtualMoveDirection, 1f);
 
             if (starterAssetsInputs != null)
-                starterAssetsInputs.move = move;
+                starterAssetsInputs.MoveInput(move);
 
             ApplyCharacterMovement(move);
         }
@@ -154,7 +261,7 @@ namespace StarterAssets
             Vector2 look = Vector2.ClampMagnitude(virtualLookDirection * cameraJoystickSensivity, 1f);
 
             if (starterAssetsInputs != null)
-                starterAssetsInputs.look = look;
+                starterAssetsInputs.LookInput(look);
 
             ApplyCharacterLook(look);
         }
@@ -162,7 +269,10 @@ namespace StarterAssets
         public void VirtualJumpInput(bool virtualJumpState)
         {
             if (starterAssetsInputs != null)
-                starterAssetsInputs.jump = virtualJumpState;
+                starterAssetsInputs.JumpInput(virtualJumpState);
+
+            if (virtualJumpState)
+                EnsureCursorLocked();
 
             if (!virtualJumpState || movement == null)
                 return;
@@ -173,8 +283,10 @@ namespace StarterAssets
 
         public void VirtualSprintInput(bool virtualSprintState)
         {
+            EnsureCursorLocked();
+
             if (starterAssetsInputs != null)
-                starterAssetsInputs.sprint = virtualSprintState;
+                starterAssetsInputs.SprintInput(virtualSprintState);
 
             ApplyCharacterRun(virtualSprintState);
         }

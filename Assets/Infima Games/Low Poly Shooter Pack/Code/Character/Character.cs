@@ -699,10 +699,10 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private void UpdateCursorState()
 		{
-			//Update cursor visibility.
-			Cursor.visible = !cursorLocked;
-			//Update cursor lock state.
-			Cursor.lockState = cursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
+			// В WebGL прямой Cursor.lockState = Locked вызывает requestPointerLock()
+			// без жеста пользователя, и необработанный отказ промиса роняет главный цикл
+			// вместе с WebSocket. Поэтому захват идёт через SafeCursor (JS-плагин с catch).
+			SafeCursor.SetLocked(cursorLocked);
 		}
 
 		/// <summary>

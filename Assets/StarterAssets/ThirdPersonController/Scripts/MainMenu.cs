@@ -80,6 +80,14 @@ public class MainMenu : MonoBehaviour
 
         if (NetworkServer.active || NetworkClient.active)
         {
+            // После обрыва клиент мог остаться в состоянии «подключается» — тогда новый
+            // старт блокировался бы навсегда. Сбрасываем состояние перед проверкой.
+            if (manager is X1NetworkManager X1Manager)
+                X1Manager.PrepareForManualConnect();
+        }
+
+        if (NetworkServer.active || NetworkClient.active)
+        {
             SetStatus("Подключение уже выполняется...");
             return;
         }
@@ -140,6 +148,9 @@ public class MainMenu : MonoBehaviour
         NetworkManager manager = NetworkManager.singleton;
 
         // Выход по кнопке — это осознанное решение игрока, автопереподключение тут не нужно.
+        // Также сбрасываем сохранённый выбор команды, чтобы следующий сеанс начинался чисто.
+        TeamSelection.Clear();
+
         if (manager is X1NetworkManager x1Manager)
             x1Manager.DisableAutoReconnect();
 

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -38,14 +39,15 @@ namespace StarterAssets
         {
             if (Input.GetMouseButtonDown(1)) // ��� ������� �� ������ ������ ����
             {
-                Cursor.visible = false; // �������� ������
-                Cursor.lockState = CursorLockMode.Locked; // ����������� ������
+                // Через SafeCursor: в WebGL прямой Cursor.lockState вызывает
+                // requestPointerLock() без жеста пользователя и роняет главный цикл.
+                SafeCursor.NotifyUserGesture();
+                SafeCursor.Lock();
             }
 
             if (Input.GetKeyDown(KeyCode.Escape)) // ��� ������� �� ������� ESC
             {
-                Cursor.visible = true; // ���������� ������
-                Cursor.lockState = CursorLockMode.None; // ����������� ������
+                SafeCursor.Unlock();
             }
         }
 
@@ -80,6 +82,13 @@ namespace StarterAssets
         /// </summary>
         public void OnShoot(InputAction.CallbackContext context)
         {
+            if (IsPointerOverUI())
+            {
+                if (context.phase == InputActionPhase.Canceled)
+                    ShootInput(false);
+                return;
+            }
+
             // Started/Performed — кнопку нажали, Canceled — отпустили.
             if (context.phase == InputActionPhase.Canceled)
                 ShootInput(false);
@@ -114,6 +123,11 @@ namespace StarterAssets
         /// Character.SetFireInput повторяет логику Character.OnTryFire (удержание,
         /// одиночный выстрел, очередь, патроны, перезарядка — всё как было).
         /// </summary>
+        private static bool IsPointerOverUI()
+        {
+            return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        }
+
         public void ShootInput(bool newShootState)
         {
             // PlayerInput шлёт Started, а затем Performed — обрабатываем смену один раз.

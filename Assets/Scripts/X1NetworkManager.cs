@@ -53,6 +53,10 @@ public class X1NetworkManager : NetworkManager
     // нажал «выйти» — тогда автоматически подключаться обратно не нужно.
     private bool _autoReconnectEnabled;
 
+    // Была ли вкладка не в фокусе — чтобы переподключение срабатывало только после
+    // реального ухода в фон, а не на каждый тап по экрану.
+    private bool _wasUnfocused;
+
     #region Запуск игры
 
     /// <summary>
@@ -131,27 +135,30 @@ public class X1NetworkManager : NetworkManager
 
     private void ConfigureDedicatedServer()
     {
-        // Приоритет: аргумент -scene → onlineScene из инспектора → defaultServerScene.
+        // В production у нас часто нет доступа менять unit-файл на сервере. Поэтому
+        // приоритет сохраняем стабильным: сначала onlineScene из инспектора, затем
+        // defaultServerScene и только после этого аргумент -scene. Это позволяет
+        // серверу нормально стартовать без -scene, если сцену уже назначили в NetworkManager.
         string scenePath = null;
 
+        if (!string.IsNullOrWhiteSpace(onlineScene))
+            scenePath = ResolveScenePath(onlineScene);
+
+        if (scenePath == null)
+            scenePath = ResolveScenePath(defaultServerScene);
+
         string requestedScene = CommandLineArg("-scene");
-        if (!string.IsNullOrWhiteSpace(requestedScene))
+        if (scenePath == null && !string.IsNullOrWhiteSpace(requestedScene))
         {
             scenePath = ResolveScenePath(requestedScene);
             if (scenePath == null)
                 Debug.LogError($"[X1NetworkManager] Сцена '{requestedScene}' из аргумента -scene не найдена в Build Settings. Используем сцену по умолчанию.");
         }
 
-        if (scenePath == null && !string.IsNullOrWhiteSpace(onlineScene))
-            scenePath = ResolveScenePath(onlineScene);
-
-        if (scenePath == null)
-            scenePath = ResolveScenePath(defaultServerScene);
-
         if (scenePath == null)
         {
-            Debug.LogError($"[X1NetworkManager] Выделенный сервер: ни одна игровая сцена ('{requestedScene}', '{onlineScene}', '{defaultServerScene}') не найдена в Build Settings. " +
-                           "Сервер останется в сцене меню, и игроки НЕ смогут заспавниться. Укажи -scene Football или -scene Lasertag.");
+            Debug.LogError($"[X1NetworkManager] Выделенный сервер: ни одна игровая сцена ('{onlineScene}', '{defaultServerScene}', '{requestedScene}') не найдена в Build Settings. " +
+                           "Сервер останется в сцене меню, и игроки НЕ смогут заспавниться. Проверь Build Settings и поле onlineScene в X1NetworkManager.");
         }
         else
         {
@@ -358,6 +365,7 @@ public class X1NetworkManager : NetworkManager
     {
         _autoReconnectEnabled = false;
         _desiredScene = null;
+        TeamSelection.Clear();
         CancelReconnect();
     }
 
@@ -444,21 +452,50 @@ public class X1NetworkManager : NetworkManager
             yield return null;
     }
 
-    private void OnApplicationPause(bool paused) => HandleBrowserResume(!paused);
+    private void OnApplicationPause(bool paused) => TrackVisibility(!paused);
 
-    private void OnApplicationFocus(bool hasFocus) => HandleBrowserResume(hasFocus);
+    private void OnApplicationFocus(bool hasFocus) => TrackVisibility(hasFocus);
+
+    /// <summary>
+    /// Помнит, что вкладка/окно действительно уходили не в фокус. Это отличает
+    /// «вернулись из фона» от обычного клика внутри игры — иначе переподключение
+    /// срабатывало бы на каждом тапе по экрану и выбрасывало бы из матча.
+    /// </summary>
+    private void TrackVisibility(bool focused)
+    {
+        if (!focused)
+        {
+            _wasUnfocused = true;
+            return;
+        }
+
+        if (_wasUnfocused)
+        {
+            _wasUnfocused = false;
+            HandleBrowserResume();
+        }
+    }
 
     /// <summary>
     /// В WebGL при возврате на вкладку браузер отдаёт уже мёртвый WebSocket
     /// («Page entered Back-Forward Cache»). Mirror узнаёт об этом не сразу, поэтому
     /// проверяем соединение сами и переподключаемся.
     /// </summary>
-    private void HandleBrowserResume(bool resumed)
+    private void HandleBrowserResume()
     {
-        if (!resumed || !_autoReconnectEnabled || _desiredScene == null || _desiredAsHost)
+        if (!_autoReconnectEnabled || _desiredScene == null || _desiredAsHost)
+            return;
+
+        // Переподключение уже идёт — не плодим новые попытки.
+        if (_reconnectRoutine != null)
             return;
 
         if (NetworkClient.isConnected)
+            return;
+
+        // Клиент ещё не успел стартовать (например, пришли сюда сразу после обрыва
+        // до первого OnClientDisconnect) — тогда переподключением займётся сам обрыв.
+        if (!NetworkClient.active && !NetworkServer.active)
             return;
 
         Debug.LogWarning("[X1NetworkManager] Вернулись на вкладку, а соединения нет — переподключаемся.");
@@ -467,6 +504,29 @@ public class X1NetworkManager : NetworkManager
             StopClient();
 
         ScheduleReconnect("Соединение не пережило уход вкладки в фоновый режим.");
+    }
+
+    /// <summary>
+    /// Подготовка к подключению по кнопке в меню.
+    ///
+    /// После обрыва клиент может остаться в состоянии «подключается» (или висеть
+    /// автопереподключение) — тогда обычная проверка в MainMenu блокирует новый старт
+    /// и игрок не может зайти снова. Здесь всё это гасим, чтобы кнопка работала.
+    /// </summary>
+    public void PrepareForManualConnect()
+    {
+        CancelReconnect();
+        _autoReconnectEnabled = false;
+        _desiredScene = null;
+
+        if (NetworkServer.active || NetworkClient.active)
+        {
+            Debug.Log("[X1NetworkManager] Сбрасываем предыдущее подключение перед новым стартом.");
+            StopHost();
+
+            if (NetworkServer.active || NetworkClient.active)
+                StopClient();
+        }
     }
 
     #endregion

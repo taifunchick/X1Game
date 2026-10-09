@@ -75,6 +75,10 @@ public class ButtonColorSelecter : NetworkBehaviour
         }
 
         // Команда нужна счёту, чтобы считать общую статистику Red/Blue.
+        // Также сохраняем её в глобальном состоянии, чтобы выбранная команда переживала
+        // смену сцены и была применена к локальному игроку после спавна.
+        TeamSelection.Select(teamName);
+
         var combat = _player.GetComponent<NetworkCombatPlayer>();
         if (combat != null)
             combat.CmdSetTeam(teamName);
@@ -102,17 +106,18 @@ public class ButtonColorSelecter : NetworkBehaviour
 
     private void ShowCursor()
     {
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
-        SetCharacterCursorLocked(false);
+        SafeCursor.Unlock();
+        SafeCursor.SetInfimaCursorLocked(false);
         SetStarterLookEnabled(false);
     }
 
     private void HideCursor()
     {
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
-        SetCharacterCursorLocked(true);
+        // HideCursor вызывается прямо из обработчика клика по кнопке выбора команды,
+        // поэтому здесь уже есть пользовательский жест — захват мыши разрешён.
+        SafeCursor.NotifyUserGesture();
+        SafeCursor.Lock();
+        SafeCursor.SetInfimaCursorLocked(true);
         SetStarterLookEnabled(true);
     }
 
