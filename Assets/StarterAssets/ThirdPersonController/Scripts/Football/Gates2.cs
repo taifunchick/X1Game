@@ -12,14 +12,22 @@ public class Gates2 : NetworkBehaviour
 
     private void OnVariableChanged(int oldValue, int newValue)
     {
-        Debug.Log($"Variable changed from {oldValue} to {newValue}");
+        // _TMP может быть не назначен, а hook вызывается на каждом изменении счёта:
+        // без проверки это NullReferenceException на каждый гол, то есть поток ошибок в лог.
+        if (_TMP == null)
+            return;
+
+        if (X1Log.InfoEnabled)
+            Debug.Log($"Variable changed from {oldValue} to {newValue}");
+
         _TMP.text = score.ToString();
     }
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        _TMP.text = score.ToString();
+        if (_TMP != null)
+            _TMP.text = score.ToString();
     }
 
 

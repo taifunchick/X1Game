@@ -1,0 +1,34 @@
+# =============================================================================
+#  Ротация лог-файла Unity-сервера.
+#
+#  НУЖЕН ТОЛЬКО если вы запускаете сервер с `-logFile /home/bazarov/game/server.log`
+#  (вариант «в файл»). Рекомендуемый unit-файл использует `-logFile -`, то есть
+#  пишет лог в journald, а journald ротирует сам — тогда этот файл не нужен.
+#
+#  Без ротации server.log растёт без ограничения. Рано или поздно он заполняет
+#  раздел, и дальше сервер ведёт себя необъяснимо: запись в лог блокируется,
+#  Unity перестаёт обрабатывать сеть, а в journal появляется «No space left on device».
+#
+#  Установка:
+#     sudo cp Deploy/logrotate/unity-server /etc/logrotate.d/unity-server
+#     sudo logrotate -d /etc/logrotate.d/unity-server   # сухая проверка
+# =============================================================================
+
+/home/bazarov/game/server.log
+/home/bazarov/game/logs/*.log
+{
+    daily
+    rotate 7
+    maxsize 200M
+    compress
+    delaycompress
+    missingok
+    notifempty
+
+    # copytruncate обязателен: Unity держит файл открытым и не умеет переоткрывать
+    # лог по сигналу. Без copytruncate после ротации сервер продолжит писать
+    # в переименованный (уже сжатый) файл, и новый лог останется пустым.
+    copytruncate
+
+    su bazarov bazarov
+}

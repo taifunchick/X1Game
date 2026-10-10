@@ -18,6 +18,14 @@ public class ButtonColorSelecter : NetworkBehaviour
 
     private void Start()
     {
+        // Панель выбора команды — чисто клиентский UI. На выделенном сервере её не существует
+        // как явления: ни курсора, ни локального игрока там нет, а Update крутился бы вхолостую.
+        if (Mirror.Utils.IsHeadless())
+        {
+            enabled = false;
+            return;
+        }
+
         // Команда уже выбрана кнопками MainMenu — панель выбора в сцене не нужна.
         if (TeamSelection.HasSelection)
         {

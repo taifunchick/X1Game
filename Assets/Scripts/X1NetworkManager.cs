@@ -27,6 +27,19 @@ public class X1NetworkManager : NetworkManager
     [Tooltip("Сцена, которую грузит выделенный сервер, если не передан аргумент командной строки -scene <имя>")]
     public string defaultServerScene = "Lasertag";
 
+    [Header("X1: выделенный сервер")]
+    [Tooltip("Ограничение частоты кадров headless-сервера. КРИТИЧНО ВАЖНО: без ограничения главный цикл " +
+             "крутится со скоростью тысячи кадров в секунду — сервер съедает всё CPU одного ядра, " +
+             "Mono-куча тонет в сборках мусора, и через минуту-другую сервер перестаёт обрабатывать " +
+             "попадания и пускать игроков в сцену. 0 — взять sendRate из настроек Mirror. " +
+             "Можно переопределить без пересборки аргументом командной строки: -fps 60")]
+    public int headlessTargetFrameRate = 60;
+
+    [Tooltip("Не глушить Debug.Log на выделенном сервере. По умолчанию Info-сообщения на сервере отключаются: " +
+             "Unity пишет их в лог синхронно, и при активной игре это заметная нагрузка. " +
+             "Эквивалент аргумента командной строки -verbose.")]
+    public bool verboseServerLogging = false;
+
     [Tooltip("Сколько секунд клиент ждёт сцену от сервера после подключения. Если сервер так и не прислал сцену — отключаемся с понятной ошибкой вместо вечного ожидания.")]
     public float sceneMessageTimeout = 15f;
 
@@ -179,6 +192,68 @@ public class X1NetworkManager : NetworkManager
         Debug.Log($"[X1NetworkManager] Выделенный сервер: сцена '{onlineScene}', порт {CurrentPort()}, макс. игроков {maxConnections}");
     }
 
+    /// <summary>
+    /// Ограничение частоты кадров headless-сервера.
+    ///
+    /// ЭТО ГЛАВНАЯ ПРИЧИНА ПАДЕНИЙ СЕРВЕРА ПРИ 2+ ИГРОКАХ.
+    /// Mirror вызывает этот метод из StartServer()/StartClient(), но в штатной реализации
+    /// <c>NetworkManager.ConfigureHeadlessFrameRate()</c> стоит всего одна строка:
+    /// <c>Application.targetFrameRate = sendRate;</c>. В копии Mirror этого проекта она была
+    /// удалена (единственное отличие от апстрима v96.0.1 во всех сетевых файлах), и метод
+    /// превратился в пустой.
+    ///
+    /// Последствия на выделенном Linux-сервере: нет vsync, нет targetFrameRate → главный цикл
+    /// Unity крутится настолько быстро, насколько позволяет CPU (обычно 1000–10000 кадров/с).
+    /// Каждый кадр выполняются все Update/LateUpdate сцены и префаба игрока: таймер раунда
+    /// с <c>string.Format</c> и TMP-текстами, счётчики очков, Infima-«motions» с пружинами,
+    /// SphereCast'ы WallAvoidance/Interactor, снимки NetworkTransform. Всё это мусорит в
+    /// managed-куче, поэтому Mono непрерывно собирает мусор.
+    ///
+    /// Один игрок сервер ещё тянул. На втором ядро загружается на 100%, кадр не успевает
+    /// обработать сеть — и сервер перестаёт засчитывать попадания. Новый клиент при этом
+    /// проходит WebSocket-рукопожатие (его ведёт отдельный поток транспорта), но главный поток
+    /// до него уже не доходит: игрок не попадает в сцену LaserTag. Процесс остаётся живым,
+    /// поэтому <c>Restart=on-failure</c> в systemd не срабатывает — «сервис висит и не
+    /// перезапускается».
+    ///
+    /// Переопределение здесь — страховка: даже если Mirror обновят или строку снова потеряют,
+    /// ограничение частоты кадров останется. Строка в самом Mirror тоже восстановлена.
+    /// </summary>
+    public override void ConfigureHeadlessFrameRate()
+    {
+        if (!Mirror.Utils.IsHeadless())
+            return;
+
+        // В headless vsync бессмысленен, а ненулевое значение ломает targetFrameRate.
+        QualitySettings.vSyncCount = 0;
+
+        int rate = headlessTargetFrameRate;
+        if (rate <= 0)
+            rate = sendRate > 0 ? sendRate : 60;
+
+        // Аргумент командной строки важнее инспектора: можно подобрать тик-рейт на живом сервере.
+        string fpsArg = CommandLineArg("-fps");
+        if (!string.IsNullOrWhiteSpace(fpsArg) &&
+            int.TryParse(fpsArg, out int fpsFromArgs) && fpsFromArgs > 0)
+        {
+            rate = fpsFromArgs;
+        }
+
+        Application.targetFrameRate = rate;
+
+        // Флажок из инспектора включаем позже, чем X1ServerWatchdog успевает прочитать командную
+        // строку (сторож ставится в AfterSceneLoad, раньше Start() менеджера). Поэтому
+        // применяем его здесь повторно.
+        if (verboseServerLogging && !X1ServerWatchdog.VerboseLogging)
+        {
+            X1ServerWatchdog.VerboseLogging = true;
+            X1Log.Restore();
+        }
+
+        Debug.Log($"[X1NetworkManager] Headless-сервер: Application.targetFrameRate = {rate} Гц " +
+                  $"(sendRate = {sendRate}). Без этого ограничения сервер «захлёбывается» на 2+ игроках.");
+    }
+
     #endregion
 
     #region Колбэки сервера
@@ -205,6 +280,35 @@ public class X1NetworkManager : NetworkManager
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
+        if (playerPrefab == null)
+        {
+            Debug.LogError("[X1NetworkManager] playerPrefab не назначен в NetworkManager — игрок не может быть создан. " +
+                           "Назначьте префаб в инспекторе на объекте NetworkManager в сцене MainMenu.");
+            conn.Disconnect();
+            return;
+        }
+
+        // Игровой сцены ещё нет — спавнить некуда, Mirror отклонил бы AddPlayer сам.
+        // Пишем понятную причину, чтобы в логе сервера было видно, а не гадать.
+        if (string.IsNullOrEmpty(networkSceneName) || networkSceneName == offlineScene)
+        {
+            Debug.LogError($"[X1NetworkManager] AddPlayer от connId={conn.connectionId} отклонён: сервер всё ещё в сцене меню " +
+                           $"('{SceneManager.GetActiveScene().name}'). Игровая сцена не загрузилась — проверьте onlineScene/" +
+                           "defaultServerScene и аргумент -scene.");
+            conn.Disconnect();
+            return;
+        }
+
+        // Защита от переполнения: Mirror сам проверяет лимит на уровне транспорта, но если
+        // maxConnections разошёлся с реальностью — лучше явно отказать и записать это в лог.
+        if (NetworkServer.connections.Count >= maxConnections)
+        {
+            Debug.LogWarning($"[X1NetworkManager] Сервер полон ({NetworkServer.connections.Count}/{maxConnections}) — " +
+                             $"connId={conn.connectionId} отключён.");
+            conn.Disconnect();
+            return;
+        }
+
         // Сначала штатные NetworkStartPosition, потом точки с тегом "Respawn" (их используют сцены проекта).
         Transform startPos = GetStartPosition();
         if (startPos == null)
@@ -219,6 +323,16 @@ public class X1NetworkManager : NetworkManager
 
         Debug.Log($"[X1NetworkManager] Игрок для connId={conn.connectionId} создан в сцене '{SceneManager.GetActiveScene().name}' " +
                   $"в точке {player.transform.position}. Всего игроков: {NetworkServer.connections.Count}");
+    }
+
+    /// <summary>
+    /// Ошибки транспорта на сервере. Без этого обрыва выглядят как «сервер просто перестал работать»:
+    /// в логе нет ни причины, ни номера соединения.
+    /// </summary>
+    public override void OnServerError(NetworkConnectionToClient conn, TransportError error, string reason)
+    {
+        base.OnServerError(conn, error, reason);
+        Debug.LogWarning($"[X1NetworkManager] Ошибка транспорта на сервере: connId={conn?.connectionId}, {error} — {reason}");
     }
 
     public override void OnServerDisconnect(NetworkConnectionToClient conn)

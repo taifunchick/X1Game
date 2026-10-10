@@ -510,11 +510,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxMessageSize: 16384
-  maxHandshakeSize: 3000
+  maxHandshakeSize: 16384
   serverMaxMsgsPerTick: 10000
   clientMaxMsgsPerTick: 1000
   sendTimeout: 5000
-  receiveTimeout: 20000
+  receiveTimeout: 120000
   noDelay: 1
   sslEnabled: 0
   sslProtocols: 3072

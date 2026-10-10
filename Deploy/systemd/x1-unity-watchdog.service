@@ -1,0 +1,69 @@
+# =============================================================================
+#  Внешний сторож выделенного сервера Unity.
+#
+#  Второй, независимый уровень самовосстановления: ловит случаи, когда процесс
+#  не может помочь себе сам (deadlock в Mono, состояние D, исчерпание потоков).
+#  Внутренний сторож (X1ServerWatchdog) при этом остаётся основным и срабатывает
+#  быстрее — этот нужен как страховка.
+#
+#  Установка:
+#     sudo cp Deploy/scripts/x1-unity-watchdog.sh /usr/local/bin/x1-unity-watchdog.sh
+#     sudo chmod +x /usr/local/bin/x1-unity-watchdog.sh
+#     sudo cp Deploy/systemd/x1-unity-watchdog.service /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now x1-unity-watchdog
+#     sudo journalctl -u x1-unity-watchdog -f
+#
+#  Зависимости: curl (желательно), coreutils, systemd.
+#     sudo apt-get install -y curl
+#
+#  ВАЖНО: скрипт вызывает `systemctl restart unity-server`, поэтому ему нужны
+#  права. Два варианта:
+#   a) запускать от root (как в этом unit-файле) — просто и достаточно для одного VPS;
+#   b) запускать от обычного пользователя и разрешить ему ТОЛЬКО перезапуск сервиса
+#      через sudoers без пароля:
+#        bazarov ALL=(root) NOPASSWD: /bin/systemctl restart unity-server, \
+#                                     /bin/systemctl is-active unity-server, \
+#                                     /bin/systemctl status unity-server *
+#      тогда замените User=root на User=bazarov и вызовы systemctl — на sudo systemctl.
+# =============================================================================
+
+[Unit]
+Description=X1TEAM Unity Server Watchdog (внешний сторож)
+After=network-online.target unity-server.service
+Wants=network-online.target
+
+# Сторож — не критичный сервис: пусть systemd не считает его отказы стартовыми.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/x1-unity-watchdog.sh
+Restart=always
+RestartSec=10
+
+# Настройки сторожа. Пути должны совпадать с unity-server.service.
+Environment=X1_SERVICE=unity-server
+Environment=X1_HEALTH_URL=http://127.0.0.1:8084/health
+Environment=X1_GAME_HOST=127.0.0.1
+Environment=X1_GAME_PORT=27777
+Environment=X1_HEARTBEAT_FILE=/home/bazarov/game/server.heartbeat
+Environment=X1_CHECK_INTERVAL=10
+Environment=X1_FAIL_LIMIT=3
+Environment=X1_HEARTBEAT_MAX_AGE=60
+Environment=X1_PROBE_TIMEOUT=5
+Environment=X1_RESTART_COOLDOWN=120
+Environment=X1_GRACE_AFTER_RESTART=90
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=x1-watchdog
+
+# Сторожу не нужны большие ресурсы.
+MemoryMax=128M
+TasksMax=64
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

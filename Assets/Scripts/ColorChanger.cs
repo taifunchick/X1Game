@@ -13,6 +13,10 @@ public class ColorChanger : NetworkBehaviour
     [SyncVar(hook = nameof(OnColorChanged))]
     [SerializeField] private Color _color = Color.white;
 
+    /// Экземпляр материала этого рендерера. Кэшируется, потому что каждое обращение к
+    /// renderer.material — это native-вызов (и создание копии материала при первом обращении).
+    private Material _materialInstance;
+
     private void Awake()
     {
         if (_rend == null)
@@ -67,12 +71,24 @@ public class ColorChanger : NetworkBehaviour
 
     private void ApplyColor(Color color)
     {
+        color.a = 1f;
+
+        // На выделенном сервере ничего не рендерится, поэтому экземпляры материалов там не нужны
+        // вовсе. Обращение к renderer.material создаёт копию материала в native-памяти, а игроков
+        // за время жизни серверного процесса проходят сотни — на headless просто не трогаем рендерер.
+        if (Mirror.Utils.IsHeadless())
+            return;
+
         if (_rend == null)
             _rend = GetComponent<Renderer>();
         if (_rend == null)
             return;
 
-        color.a = 1f;
-        _rend.material.color = color;
+        // Кэшируем экземпляр материала: повторные обращения к .material — это лишний native-вызов
+        // на каждую смену цвета.
+        if (_materialInstance == null)
+            _materialInstance = _rend.material;
+
+        _materialInstance.color = color;
     }
 }

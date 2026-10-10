@@ -71,3 +71,15 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# --- X1: артефакты рантайма выделенного сервера -----------------------------
+# Дампы памяти, которые Mono оставляет после аварийного завершения процесса.
+# Три таких файла по 10 МБ уже лежали в репозитории — в git им делать нечего.
+mono_crash*.blob
+mono_crash*.json
+hs_err_pid*.log
+
+# Логи и файлы живости сервера (см. Deploy/README.md)
+*.log
+*.heartbeat
+*.stalled
