@@ -667,6 +667,11 @@ namespace Mirror
         {
             if (Utils.IsHeadless())
             {
+                // X1FIX: строка была потеряна при локальной правке Mirror.
+                // Без неё headless-сервер крутит главный цикл без ограничения FPS
+                // (тысячи кадров/с), сжирает CPU и заваливает Mono GC.
+                // Дублируется в X1NetworkManager.ConfigureHeadlessFrameRate().
+                Application.targetFrameRate = sendRate;
                 // Debug.Log($"Server Tick Rate set to {Application.targetFrameRate} Hz.");
             }
         }

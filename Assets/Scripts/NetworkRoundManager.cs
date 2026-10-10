@@ -26,6 +26,9 @@ public class NetworkRoundManager : NetworkBehaviour
     [SyncVar] public double endTime;
     [SyncVar(hook = nameof(OnFinishedChanged))] public bool finished;
 
+    /// Последняя секунда, записанная в текст таймера. -1 — текст ещё не заполняли.
+    private int _shownSeconds = -1;
+
     private void Awake()
     {
         Instance = this;
@@ -46,7 +49,12 @@ public class NetworkRoundManager : NetworkBehaviour
 
     private void Update()
     {
-        if (matchFinishedPanel != null && matchFinishedPanel.activeSelf != finished)
+        // На выделенном сервере нет ни текста таймера, ни панели итогов: headless-сборка ничего
+        // не рисует. Раньше этот Update выполнял string.Format и дёргал TMP каждый кадр —
+        // на сервере это чистый мусор в managed-куче (и лишняя работа GC) без всякого смысла.
+        bool headless = Mirror.Utils.IsHeadless();
+
+        if (!headless && matchFinishedPanel != null && matchFinishedPanel.activeSelf != finished)
             matchFinishedPanel.SetActive(finished);
 
         if (finished)
@@ -59,8 +67,14 @@ public class NetworkRoundManager : NetworkBehaviour
         }
 
         int seconds = Mathf.Max(0, Mathf.CeilToInt((float)(endTime - NetworkTime.time)));
-        if (timerText != null)
+
+        // Текст обновляем только когда изменилась отображаемая секунда, а не каждый кадр:
+        // string.Format + перестроение меша TMP на 60 FPS — заметная нагрузка и на клиенте WebGL.
+        if (!headless && timerText != null && seconds != _shownSeconds)
+        {
+            _shownSeconds = seconds;
             timerText.text = string.Format("{0}:{1:00}", seconds / 60, seconds % 60);
+        }
 
         if (isServer && seconds <= 0)
         {
@@ -108,6 +122,7 @@ public class NetworkRoundManager : NetworkBehaviour
 
         endTime = NetworkTime.time + roundLength;
         finished = false;
+        _shownSeconds = -1;
         Debug.Log("[NetworkRoundManager] Новый раунд запущен.");
     }
 }

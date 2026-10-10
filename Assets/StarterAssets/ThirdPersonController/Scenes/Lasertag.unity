@@ -1007,6 +1007,7 @@ MonoBehaviour:
   _ballPrefab: {fileID: 1975457108487340, guid: ec3e8f3ed27e2244caaedaf589590a03,
     type: 3}
   _position: {x: 1.05, y: 0.54, z: 0.12}
+  _spawnOnServer: 0
 --- !u!4 &668612028
 Transform:
   m_ObjectHideFlags: 0

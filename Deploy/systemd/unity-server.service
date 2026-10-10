@@ -1,0 +1,119 @@
+# =============================================================================
+#  X1TEAM — выделенный сервер Unity (Mirror, WebSocket)
+#  Установка:
+#     sudo cp Deploy/systemd/unity-server.service /etc/systemd/system/unity-server.service
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now unity-server
+# =============================================================================
+#
+#  ЧТО ИЗМЕНЕНО ПО СРАВНЕНИЮ С ПРЕЖНИМ ЮНИТОМ И ПОЧЕМУ
+#
+#  1. Restart=on-failure  ->  Restart=always
+#     on-failure не перезапускает процесс, который ЗАВИС, но остался жив, и не
+#     перезапускает процесс, убитый нашим же watchdog'ом штатным кодом выхода.
+#
+#  2. В [Unit] добавлено StartLimitIntervalSec=0
+#     По умолчанию systemd сдаётся после 5 стартов за 10 секунд и переводит юнит
+#     в состояние failed НАВСЕГДА (до ручного systemctl reset-failed). Именно это
+#     выглядело как «сервер упал и не перезапускается заново».
+#
+#  3. Добавлены -batchmode -nographics
+#     Сборка Dedicated Server и так headless, но явные флаги гарантируют, что
+#     Mirror.Utils.IsHeadless() вернёт true, Unity не будет поднимать графику/звук
+#     и не попытается открыть окно на машине без дисплея.
+#
+#  4. -logfile заменён на -logFile -
+#     Правильное имя аргумента — -logFile. Значение «-» направляет лог в stdout,
+#     то есть в journald: журнал ротируется сам и не может забить диск (прежний
+#     server.log рос без ограничения и рано или поздно заполнял раздел).
+#     Смотреть: sudo journalctl -u unity-server -f
+#
+#  5. Добавлены аргументы X1ServerWatchdog: -watchdog -stats -heartbeat -fps
+#     -fps 60        ограничение частоты кадров сервера (ГЛАВНОЕ: без него главный
+#                    цикл крутит тысячи кадров в секунду и сервер «захлёбывается»
+#                    на втором игроке);
+#     -watchdog 45   если главный поток молчит 45 с — процесс завершает сам себя,
+#                    и systemd поднимает его заново;
+#     -heartbeat     файл для внешнего мониторинга (см. x1-unity-watchdog.service).
+#
+#  6. LimitNOFILE / TasksMax — Mirror держит по 2 потока на каждое соединение
+#     (приём + отправка), поэтому лимит файловых дескрипторов по умолчанию (1024)
+#     упирается уже на нескольких сотнях подключений.
+#
+#  7. OOMPolicy=stop — если ядро убьёт процесс по нехватке памяти, systemd
+#     корректно приберёт остатки и перезапустит сервис, а не оставит полумёртвую cgroup.
+# =============================================================================
+
+[Unit]
+Description=X1TEAM Unity Dedicated Server (Mirror / WebSocket)
+After=network-online.target
+Wants=network-online.target
+
+# Не сдаваться после серии быстрых перезапусков.
+# По умолчанию systemd после 5 стартов за 10 секунд переводит юнит в состояние failed
+# и больше его НЕ поднимает — до ручного `systemctl reset-failed unity-server`.
+# Ноль отключает это ограничение совсем.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=bazarov
+Group=bazarov
+WorkingDirectory=/home/bazarov/game
+
+# Единая локаль: без неё часть сообщений Unity/Mono печатается как "???" и портит grep по логу.
+Environment=LC_ALL=C.UTF-8
+Environment=LANG=C.UTF-8
+
+# Проверить, что исполняемый файл вообще есть и ему выданы права.
+ExecStartPre=/bin/bash -c 'test -x /home/bazarov/game/LinuxBuild.x86_64 || { echo "Нет исполняемого файла или нет прав: chmod +x /home/bazarov/game/LinuxBuild.x86_64"; exit 1; }'
+
+ExecStart=/home/bazarov/game/LinuxBuild.x86_64 \
+          -batchmode \
+          -nographics \
+          -logFile - \
+          -scene Lasertag \
+          -port 27777 \
+          -fps 60 \
+          -watchdog 45 \
+          -stats 30 \
+          -heartbeat /home/bazarov/game/server.heartbeat
+
+# Перезапускать всегда: и после падения, и после зависания, и после штатного выхода.
+Restart=always
+RestartSec=3
+
+# Остановка: дать Unity 20 с на корректное завершение, потом добить всю группу процессов.
+TimeoutStopSec=20
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Если ядро убьёт процесс по OOM — прибрать cgroup и перезапустить сервис.
+OOMPolicy=stop
+
+# Потоки и дескрипторы: 2 потока на каждое WebSocket-соединение + запас.
+LimitNOFILE=65536
+TasksMax=4096
+
+# Сервер игры важнее фоновых задач машины.
+Nice=-5
+CPUWeight=200
+
+# Лог целиком уходит в journald (см. -logFile -).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=unity-server
+
+# --- Ограничение памяти -------------------------------------------------------
+# Раскомментируйте и подставьте значение под свой VPS, когда узнаете реальный
+# аппетит сервера (строка [X1ServerWatchdog] … managedMemMB=… systemMemMB=… в логе,
+# где systemMemMB — вся ОЗУ машины).
+# MemoryHigh — мягкий порог (ядро начнёт притормаживать процесс),
+# MemoryMax  — жёсткий (процесс будет убит, systemd перезапустит его).
+# Ставьте MemoryMax не больше 70-80% от RAM машины: Gunicorn и nginx живут там же.
+#
+# MemoryHigh=1200M
+# MemoryMax=1800M
+
+[Install]
+WantedBy=multi-user.target

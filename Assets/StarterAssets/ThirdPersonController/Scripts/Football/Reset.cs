@@ -14,8 +14,18 @@ public class Reset : NetworkBehaviour
         {
             if (other.gameObject.CompareTag("Player"))
             {
-                _gates.score = 0;
-                _gates1.score = 0;
+                // Ссылки назначаются в инспекторе и могут отсутствовать: без проверки это
+                // NullReferenceException на каждый вход игрока в триггер, то есть поток ошибок
+                // в лог сервера (а лог на headless пишется синхронно).
+                if (_gates != null)
+                    _gates.score = 0;
+                else
+                    Debug.LogWarning("Reset: не назначен _gates — счёт первых ворот не сброшен.");
+
+                if (_gates1 != null)
+                    _gates1.score = 0;
+                else
+                    Debug.LogWarning("Reset: не назначен _gates1 — счёт вторых ворот не сброшен.");
             }
         }
     }

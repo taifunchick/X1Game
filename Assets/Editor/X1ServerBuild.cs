@@ -71,6 +71,9 @@ namespace X1.EditorTools
             if (!ValidateScenes(scenes))
                 return false;
 
+            if (!ValidateMirrorHeadlessFrameRate())
+                return false;
+
             Log("=== Сборка выделенного сервера ===");
             Log($"Сцены ({scenes.Length}): {string.Join(", ", scenes)}");
             Log($"Целевая платформа: {BuildTarget.StandaloneLinux64} (Server subtarget)");
@@ -195,6 +198,81 @@ namespace X1.EditorTools
             return false;
         }
 
+        /// <summary>
+        /// Проверка ограничения частоты кадров headless-сервера.
+        ///
+        /// Это не паранойя, а конкретная история: из копии Mirror этого проекта была удалена
+        /// строка <c>Application.targetFrameRate = sendRate;</c> в
+        /// <c>NetworkManager.ConfigureHeadlessFrameRate()</c> — единственное отличие от
+        /// апстрима v96.0.1 во всех сетевых файлах. Без неё выделенный сервер крутит главный
+        /// цикл со скоростью тысячи кадров в секунду: съедает ядро CPU, тонет в сборках мусора
+        /// Mono и на втором игроке перестаёт обрабатывать сеть. Процесс при этом остаётся живым,
+        /// поэтому systemd его не перезапускает.
+        ///
+        /// Сейчас ограничение продублировано в <c>X1NetworkManager.ConfigureHeadlessFrameRate()</c>,
+        /// поэтому потеря строки в Mirror не смертельна. Но если исчезнут ОБА места — сборку
+        /// лучше не выпускать вовсе: на стенде это выглядит как «сервер просто виснет».
+        /// </summary>
+        private static bool ValidateMirrorHeadlessFrameRate()
+        {
+            bool inMirror = SourceContains(
+                Path.Combine(Application.dataPath, "Mirror/Core/NetworkManager.cs"),
+                "Application.targetFrameRate");
+
+            bool inX1Manager = SourceContains(
+                Path.Combine(Application.dataPath, "Scripts/X1NetworkManager.cs"),
+                "Application.targetFrameRate")
+                && SourceContains(
+                Path.Combine(Application.dataPath, "Scripts/X1NetworkManager.cs"),
+                "ConfigureHeadlessFrameRate");
+
+            if (inMirror && inX1Manager)
+                return true;
+
+            if (!inMirror && !inX1Manager)
+            {
+                Debug.LogError("[X1ServerBuild] НИГДЕ не задаётся Application.targetFrameRate для headless-сервера. " +
+                               "Такой сервер крутит главный цикл без ограничения FPS, съедает всё CPU ядро и " +
+                               "зависает на втором игроке (процесс остаётся живым, systemd его не перезапускает). " +
+                               "Верните строку 'Application.targetFrameRate = sendRate;' в " +
+                               "Mirror/Core/NetworkManager.cs:ConfigureHeadlessFrameRate() или в " +
+                               "X1NetworkManager.ConfigureHeadlessFrameRate().");
+                return false;
+            }
+
+            if (!inMirror)
+                Debug.LogWarning("[X1ServerBuild] В Mirror/Core/NetworkManager.cs нет Application.targetFrameRate — " +
+                                 "похоже, локальная копия Mirror снова разошлась с апстримом. Ограничение частоты кадров " +
+                                 "держится только на X1NetworkManager.ConfigureHeadlessFrameRate(). Работать будет, " +
+                                 "но строку в Mirror лучше восстановить.");
+
+            if (!inX1Manager)
+                Debug.LogWarning("[X1ServerBuild] В X1NetworkManager нет переопределения ConfigureHeadlessFrameRate(). " +
+                                 "Ограничение частоты кадров держится только на Mirror — при обновлении библиотеки оно " +
+                                 "может снова потеряться.");
+
+            return true;
+        }
+
+        private static bool SourceContains(string path, string needle)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    Debug.LogWarning($"[X1ServerBuild] Файл для проверки не найден: {path}");
+                    return false;
+                }
+
+                return File.ReadAllText(path).IndexOf(needle, StringComparison.Ordinal) >= 0;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[X1ServerBuild] Не удалось проверить {path}: {e.Message}");
+                return false;
+            }
+        }
+
         private static void CreateZip()
         {
             try
@@ -229,19 +307,47 @@ namespace X1.EditorTools
             Log($"   {Path.Combine(OutputRoot, "libdecor-0.so.0")} (если есть в сборке)");
             Log("");
             Log("2. Остановить старый процесс сервера и запустить новый:");
-            Log($"   ./{ExecutableName}.x86_64 -batchmode -nographics -scene {GameSceneName} -logFile /var/log/x1server.log");
+            Log("   sudo systemctl stop unity-server");
+            Log($"   ./{ExecutableName}.x86_64 -batchmode -nographics -logFile - \\");
+            Log($"       -scene {GameSceneName} -port 27777 -fps 60 -watchdog 45 -stats 30");
             Log("");
-            Log("   -batchmode обязателен: без него Mirror.Utils.IsHeadless() вернёт false,");
-            Log("   сервер не стартует автоматически и не пришлёт клиенту сцену.");
+            Log("   -batchmode -nographics обязательны: без них Mirror.Utils.IsHeadless() может");
+            Log("   вернуть false, и сервер не стартует автоматически и не пришлёт клиенту сцену.");
+            Log("   -logFile - направляет лог в stdout, то есть в journald. Правильное имя");
+            Log("   аргумента — именно -logFile: с -logfile часть сборок Unity лог не пишет.");
             Log($"   -scene {GameSceneName} необязателен (подставится defaultServerScene),");
             Log("   но полезен как явное указание.");
             Log("");
-            Log("3. Проверить в логе сервера, что он загрузил игровую сцену:");
+            Log("   -fps 60 — КРИТИЧНО. Ограничивает частоту кадров headless-сервера. Без него");
+            Log("             главный цикл крутит тысячи кадров в секунду: сервер съедает ядро CPU,");
+            Log("             тонет в сборках мусора Mono и на ВТОРОМ игроке перестаёт считать");
+            Log("             попадания и пускать в сцену, оставаясь «живым» для systemd.");
+            Log("   -watchdog 45 — если главный поток замолчит на 45 с, процесс завершит сам себя,");
+            Log("                  и systemd (Restart=always) поднимет его заново.");
+            Log("   -stats 30    — раз в 30 с писать в лог строку диагностики (fps, память, игроки).");
+            Log("   -verbose     — не глушить Debug.Log (только для отладки).");
+            Log("");
+            Log("3. В бою сервер должен работать через systemd, а не вручную:");
+            Log("   Deploy/systemd/unity-server.service      — исправленный unit игрового сервера");
+            Log("   Deploy/systemd/x1-unity-watchdog.service — внешний сторож (страховка)");
+            Log("   Deploy/scripts/x1-diagnose.sh            — диагностика одной командой");
+            Log("   Deploy/nginx/sv.x1team.ru.conf           — WebSocket-прокси");
+            Log("   Deploy/README.md                         — что было сломано и как развёртывать");
+            Log("");
+            Log("4. Проверить в логе сервера, что он загрузил игровую сцену:");
+            Log("   [X1NetworkManager] Headless-сервер: Application.targetFrameRate = 60 Гц (sendRate = ...)");
             Log($"   [X1NetworkManager] Выделенный сервер: сцена '.../{GameSceneName}.unity', порт ...");
             Log($"   [X1NetworkManager] Сервер загрузил сцену '.../{GameSceneName}.unity'. Ожидаем игроков.");
+            Log("   [X1ServerWatchdog] запущен. stallTimeout=45 c ...");
             Log("");
-            Log("4. Если wss:// не работает — проблема в реверс-прокси (nginx) перед портом Unity,");
+            Log("5. Проверить, что живой не только процесс, но и главный поток:");
+            Log("   curl -s http://127.0.0.1:8084/health");
+            Log("");
+            Log("6. Если wss:// не работает — проблема в реверс-прокси (nginx) перед портом Unity,");
             Log("   а не в клиенте: nginx должен проксировать WebSocket на порт из настроек.");
+            Log("");
+            Log("7. ВАЖНО: клиентский WebGL-билд нужно пересобирать и выкладывать ОДНОВРЕМЕННО");
+            Log("   с серверным — настройки транспорта живут в сцене MainMenu и должны совпадать.");
         }
 
         private static void Log(string message) => Debug.Log($"[X1ServerBuild] {message}");

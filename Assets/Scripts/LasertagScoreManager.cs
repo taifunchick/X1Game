@@ -45,6 +45,12 @@ public class LasertagScoreManager : NetworkBehaviour
 
     void Update()
     {
+        // На выделенном сервере счёт не рисуется: обход игроков и запись в TMP каждый кадр
+        // там не нужны. Headless-сборка ничего не отображает, а лишний код в Update — это
+        // лишние такты CPU и лишний мусор в managed-куче на каждый тик сервера.
+        if (Mirror.Utils.IsHeadless())
+            return;
+
         Refresh();
     }
 

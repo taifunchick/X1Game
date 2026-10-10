@@ -65,6 +65,40 @@ public class NetworkCombatPlayer : NetworkBehaviour
     private readonly List<WeaponBehaviour> subscribedWeapons = new List<WeaponBehaviour>();
     private readonly List<WeaponBehaviour> foundWeapons = new List<WeaponBehaviour>();
 
+    // Буферы для ОДНОГО запроса Physics.RaycastNonAlloc на выстрел вместо цикла Physics.Raycast.
+    // Переиспользуются, поэтому выстрел не мусорит в managed-куче и стоит одинаково при любой
+    // геометрии сцены. CmdFire выполняется только на сервере и только в главном потоке,
+    // поэтому общее (static) состояние здесь безопасно.
+    private const int MaxRaycastHits = 24;
+    private static readonly RaycastHit[] raycastBuffer = new RaycastHit[MaxRaycastHits];
+    private static readonly int[] hitOrder = new int[MaxRaycastHits];
+
+    /// <summary>
+    /// Раскладывает в <see cref="hitOrder"/> индексы попаданий по возрастанию расстояния.
+    /// Сортировка вставками: попаданий на луче единицы, а память не выделяется вовсе.
+    /// Порядок обязателен — именно он заменяет прежний цикл «сдвинуть луч и спросить ещё раз».
+    /// </summary>
+    private static void SortHitsByDistance(int count)
+    {
+        for (int i = 0; i < count; i++)
+            hitOrder[i] = i;
+
+        for (int i = 1; i < count; i++)
+        {
+            int key = hitOrder[i];
+            float keyDistance = raycastBuffer[key].distance;
+
+            int j = i - 1;
+            while (j >= 0 && raycastBuffer[hitOrder[j]].distance > keyDistance)
+            {
+                hitOrder[j + 1] = hitOrder[j];
+                j--;
+            }
+
+            hitOrder[j + 1] = key;
+        }
+    }
+
     void Awake()
     {
         _character = GetComponent<Character>();
@@ -281,15 +315,29 @@ public class NetworkCombatPlayer : NetworkBehaviour
 
         // 1) Raycast: если CharacterController виден для raycast, первый игрок на луче —
         //    и есть цель. Иначе raycast находит стену и выстрел не пролетает сквозь неё.
+        //
+        //    ВАЖНО, почему здесь один RaycastNonAlloc, а не цикл Physics.Raycast.
+        //    Раньше союзников и самого стрелка «пропускали», сдвигая начало луча на
+        //    hit.distance + 0.05 и повторяя запрос. Если луч стартовал внутри коллайдера
+        //    (камера впритык к стене/к союзнику), hit.distance равен 0, сдвиг — 5 см, и цикл
+        //    делал до range/0.05 = 4000 физических запросов на ОДИН выстрел, причём все — на главном
+        //    потоке сервера. Два стреляющих игрока давали сотни тысяч raycast'ов в секунду:
+        //    сервер переставал успевать считать попадания и рассылать SyncVar.
+        //    Теперь все пересечения получаются одним запросом и разбираются по возрастанию
+        //    расстояния — стоимость выстрела постоянна и не зависит от геометрии.
         float wallDistance = float.MaxValue;
-        Vector3 rayOrigin = origin;
-        float rayLength = range;
 
-        //    Своих пропускаем: луч идёт сквозь союзника и может попасть в противника за ним.
-        while (rayLength > 0.01f &&
-               Physics.Raycast(rayOrigin, direction, out RaycastHit hit, rayLength, mask, QueryTriggerInteraction.Ignore))
+        int hitCount = Physics.RaycastNonAlloc(origin, direction, raycastBuffer, range, mask, QueryTriggerInteraction.Ignore);
+        SortHitsByDistance(hitCount);
+
+        for (int i = 0; i < hitCount; i++)
         {
-            var hitPlayer = hit.collider.GetComponentInParent<NetworkCombatPlayer>();
+            RaycastHit hit = raycastBuffer[hitOrder[i]];
+            Collider collider = hit.collider;
+            if (collider == null)
+                continue;
+
+            var hitPlayer = collider.GetComponentInParent<NetworkCombatPlayer>();
 
             if (hitPlayer != null)
             {
@@ -300,15 +348,13 @@ public class NetworkCombatPlayer : NetworkBehaviour
                     return;
                 }
 
-                // Союзник (или сам стрелок) — пропускаем и продолжаем луч чуть дальше него.
-                float step = hit.distance + 0.05f;
-                rayOrigin += direction * step;
-                rayLength -= step;
+                // Союзник или сам стрелок — луч летит сквозь него к следующей цели.
                 continue;
             }
 
-            // Стена — выстрел сквозь неё не пролетает.
-            wallDistance = Vector3.Distance(origin, hit.point);
+            // Стена — выстрел сквозь неё не пролетает. Дальше смотреть нечего:
+            // список отсортирован по расстоянию, значит это ближайшее препятствие.
+            wallDistance = hit.distance;
             break;
         }
 
@@ -382,12 +428,17 @@ public class NetworkCombatPlayer : NetworkBehaviour
         // Попадание по своему (тот же цвет команды) не засчитывается вообще.
         if (IsFriendly(victim))
         {
-            Debug.Log($"[Combat] {name} (team={team}) попал в своего ({victim.name}) — попадание не засчитано.");
+            // Проверка до интерполяции: на сервере Info-логи глушатся (см. X1Log), но строка
+            // сформировалась бы всё равно — а попаданий в матче сотни.
+            if (X1Log.InfoEnabled)
+                Debug.Log($"[Combat] {name} (team={team}) попал в своего ({victim.name}) — попадание не засчитано.");
             return;
         }
 
         hits++;
-        Debug.Log($"[Combat] {name} (team={team}) попал в {victim.name}. Всего попаданий: {hits}");
+
+        if (X1Log.InfoEnabled)
+            Debug.Log($"[Combat] {name} (team={team}) попал в {victim.name}. Всего попаданий: {hits}");
     }
 
     /// Команду присылает UI выбора команды (Метеор / Вымпел).
@@ -396,6 +447,7 @@ public class NetworkCombatPlayer : NetworkBehaviour
     {
         if (string.IsNullOrWhiteSpace(teamName) || team == teamName) return;
         team = teamName;
-        Debug.Log($"[Combat] {name}: назначена команда {teamName}");
+        if (X1Log.InfoEnabled)
+            Debug.Log($"[Combat] {name}: назначена команда {teamName}");
     }
 }

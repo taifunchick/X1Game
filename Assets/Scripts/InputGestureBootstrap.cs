@@ -18,6 +18,11 @@ public class InputGestureBootstrap : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Install()
     {
+        // На выделенном сервере нет ни курсора, ни мыши, ни клавиатуры: объект там не нужен,
+        // а его Update каждый кадр опрашивал бы устройства ввода и создавал лишний шум.
+        if (Mirror.Utils.IsHeadless())
+            return;
+
         // Не дублируем, если объект уже есть в сцене вручную.
         if (FindAnyObjectByType<InputGestureBootstrap>() != null)
             return;

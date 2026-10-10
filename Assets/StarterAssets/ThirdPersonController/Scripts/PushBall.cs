@@ -20,12 +20,15 @@ public class PushBall : NetworkBehaviour
                     pushDirection = pushDirection.normalized; 
                     
                     ballRigidbody.AddForce(pushDirection * pushForce, ForceMode.Impulse);
-                    Debug.Log($"Pushed ball with force: {pushDirection * pushForce}");
+                    lastPushTime = Time.time;
+
+                    if (X1Log.InfoEnabled)
+                        Debug.Log($"Pushed ball with force: {pushDirection * pushForce}");
                 }
             }
         }
     }
-    
+
 
 
     private void OnCollisionStay(Collision collision)
@@ -38,10 +41,18 @@ public class PushBall : NetworkBehaviour
                 if (ballRigidbody != null)
                 {
                     Vector3 pushDirection = collision.transform.position - transform.position;
-                    pushDirection = pushDirection.normalized; 
-                    
+                    pushDirection = pushDirection.normalized;
+
                     ballRigidbody.AddForce(pushDirection * pushForce, ForceMode.Impulse);
-                    Debug.Log($"Pushed ball with force: {pushDirection * pushForce}");
+
+                    // lastPushTime раньше НЕ обновлялся, поэтому условие cooldown было истинным
+                    // каждый FixedUpdate: мяч получал импульс 50 раз в секунду, а сервер писал
+                    // Debug.Log на каждый из них. Откат мяча разгонялся до огромных скоростей,
+                    // координаты уезжали в бесконечность, а лог забивался синхронными записями.
+                    lastPushTime = Time.time;
+
+                    if (X1Log.InfoEnabled)
+                        Debug.Log($"Pushed ball with force: {pushDirection * pushForce}");
                 }
             }
         }
