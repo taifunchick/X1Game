@@ -11,40 +11,100 @@ public class SimpleHttpServer : NetworkBehaviour
     private HttpListener httpListener;
     private string _prefix = "http://+:8084/";
 
-    void Start()
+    public override void OnStartServer()
     {
-        if (isServer)
-        {
-            StartServer();
-        }
+        base.OnStartServer();
+        StartServer();
+    }
+
+    public override void OnStopServer()
+    {
+        StopHttpServer();
+        base.OnStopServer();
     }
 
     private void StartServer()
     {
-        httpListener = new HttpListener();
-        httpListener.Prefixes.Add(_prefix); // Open URL and addr //webreqest.x1team.ru:80 or 443
-        httpListener.Start();
-        Debug.Log("HTTP Server Start Listen prefix: " + _prefix + " (Listening)...---------------------------------------------------------------------------------------------------------(httpServ)");
-        ListenForRequests();
+        if (httpListener != null)
+            return;
+
+        var listener = new HttpListener();
+        try
+        {
+            listener.Prefixes.Add(_prefix);
+            listener.Start();
+        }
+        catch (Exception ex)
+        {
+            listener.Close();
+            Debug.LogError("HTTP Server could not start: " + ex.Message);
+            return;
+        }
+
+        httpListener = listener;
+        Debug.Log("HTTP Server listening: " + _prefix);
+        ListenForRequests(listener);
     }
 
-    private async void ListenForRequests()
+    private async void ListenForRequests(HttpListener listener)
     {
-        while (true)
+        // Capture this listener: an old loop must never consume requests from a new one.
+        try
         {
-            try
+            while (ReferenceEquals(httpListener, listener) && listener.IsListening)
             {
-                var context = await httpListener.GetContextAsync();
-                ProcessRequest(context);
+                HttpListenerContext context;
+                try
+                {
+                    context = await listener.GetContextAsync();
+                }
+                catch (Exception ex)
+                {
+                    // Stop/Close completes the pending accept with an exception. Retrying
+                    // a closed listener synchronously would spin forever on Unity's thread.
+                    if (ReferenceEquals(httpListener, listener))
+                        Debug.LogError("HTTP Server stopped accepting requests: " + ex.Message);
+                    break;
+                }
+
+                try
+                {
+                    if (!ReferenceEquals(httpListener, listener))
+                        break;
+                    await ProcessRequest(context, listener);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("HTTP request failed: " + ex.Message);
+                }
+                finally
+                {
+                    try { context.Response.Close(); }
+                    catch (HttpListenerException) { /* Client disconnected or listener closed. */ }
+                    catch (ObjectDisposedException) { /* Server shutdown. */ }
+                    catch (IOException) { /* Connection closed during the response. */ }
+                }
             }
-            catch (Exception ex)
-            {
-                Debug.LogError("Error Http Server: " + ex.Message + " ---------------------------------------------------------------------------------------------------------(httpServ)");
-            }
+        }
+        finally
+        {
+            if (ReferenceEquals(httpListener, listener))
+                httpListener = null;
+            listener.Close();
         }
     }
 
-    private void ProcessRequest(HttpListenerContext context)
+    private void StopHttpServer()
+    {
+        HttpListener listener = httpListener;
+        httpListener = null;
+        // Close also releases the port when the component/scene is destroyed.
+        listener?.Close();
+    }
+
+    private void OnDestroy() => StopHttpServer();
+
+    private async System.Threading.Tasks.Task ProcessRequest(HttpListenerContext context, HttpListener listener)
     {
         string responseString = "";
         context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -53,12 +113,14 @@ public class SimpleHttpServer : NetworkBehaviour
 
         if (context.Request.HttpMethod == "POST" && context.Request.Url.AbsolutePath == "/api/football")
         {
-            
+
             if (context.Request.ContentType == "application/json")
             {
                 using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
                 {
-                    string jsonData = reader.ReadToEnd();
+                    string jsonData = await reader.ReadToEndAsync();
+                    if (!isServer || !ReferenceEquals(httpListener, listener))
+                        return;
                     Debug.Log("received JSON Data: " + jsonData);
 
                     MoveData cubeData = JsonConvert.DeserializeObject<MoveData>(jsonData);
@@ -114,14 +176,8 @@ public class SimpleHttpServer : NetworkBehaviour
         roboMove.Move(time, z, x, jump);
     }
 
-    private void OnApplicationQuit()
-    {
-        if (httpListener != null)
-        {
-            httpListener.Stop();
-            httpListener.Close();
-        }
-    }
+    private void OnApplicationQuit() => StopHttpServer();
+
 }
 
 [System.Serializable]
