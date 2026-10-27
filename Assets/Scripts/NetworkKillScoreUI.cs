@@ -7,6 +7,9 @@ public class NetworkKillScoreUI : NetworkBehaviour {
  [SerializeField] TMP_Text myHitsText;
  int lastRed = -1, lastBlue = -1, lastMy = -1;
  void Update(){
+   // На headless-сервере UI нет — счётчики в TMP не обновляем.
+   if (Mirror.Utils.IsHeadless()) return;
+
    int r=0, b=0;
    NetworkCombatPlayer me = NetworkClient.localPlayer != null
      ? NetworkClient.localPlayer.GetComponent<NetworkCombatPlayer>() : null;

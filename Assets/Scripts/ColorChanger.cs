@@ -67,6 +67,11 @@ public class ColorChanger : NetworkBehaviour
 
     private void ApplyColor(Color color)
     {
+        // На выделенном сервере рендера нет: обращение к Renderer.material создаёт
+        // материал и грузит GPU-путь, который в -nographics не нужен вовсе.
+        if (Mirror.Utils.IsHeadless())
+            return;
+
         if (_rend == null)
             _rend = GetComponent<Renderer>();
         if (_rend == null)

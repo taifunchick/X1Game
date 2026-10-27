@@ -27,6 +27,14 @@ public class X1NetworkManager : NetworkManager
     [Tooltip("Сцена, которую грузит выделенный сервер, если не передан аргумент командной строки -scene <имя>")]
     public string defaultServerScene = "Lasertag";
 
+    [Header("X1: выделенный сервер")]
+    [Tooltip("Ограничение частоты кадров headless-сервера. КРИТИЧНО: без ограничения главный цикл Unity " +
+             "крутится со скоростью тысячи кадров в секунду — сервер занимает всё ядро CPU, Mono тонет " +
+             "в сборках мусора и через минуту-другую перестаёт обрабатывать попадания и пускать игроков " +
+             "в игровую сцену (процесс при этом остаётся живым). 0 — взять sendRate из настроек Mirror. " +
+             "Можно переопределить без пересборки аргументом: -fps 60")]
+    public int headlessTargetFrameRate = 60;
+
     [Tooltip("Сколько секунд клиент ждёт сцену от сервера после подключения. Если сервер так и не прислал сцену — отключаемся с понятной ошибкой вместо вечного ожидания.")]
     public float sceneMessageTimeout = 15f;
 
@@ -179,6 +187,52 @@ public class X1NetworkManager : NetworkManager
         Debug.Log($"[X1NetworkManager] Выделенный сервер: сцена '{onlineScene}', порт {CurrentPort()}, макс. игроков {maxConnections}");
     }
 
+    /// <summary>
+    /// Ограничение частоты кадров headless-сервера — главное лечение «сервер перестал
+    /// засчитывать попадания и пускать новых игроков».
+    ///
+    /// Mirror вызывает этот метод из StartServer(), но в штатной реализации
+    /// <c>NetworkManager.ConfigureHeadlessFrameRate()</c> всего одна строка:
+    /// <c>Application.targetFrameRate = sendRate;</c>. В копии Mirror этого проекта она была
+    /// вырезана, метод стал пустым. На выделенном сервере нет vsync, поэтому главный цикл
+    /// Unity крутится настолько быстро, насколько успевает CPU (обычно 1000–10000 кадров/с):
+    /// каждый кадр выполняются Update/LateUpdate всей сцены и префаба игрока, а managed-куча
+    /// непрерывно мусорится и собирается Mono GC.
+    ///
+    /// Один игрок сервер ещё тянул. С двумя ядро упиралось в 100%, кадр не успевал обработать
+    /// сеть — попадания (CmdFire) не разбирались, а новый клиент проходил WebSocket-рукопожатие
+    /// (его ведёт отдельный поток транспорта), но не получал SceneMessage от зависшего
+    /// главного потока. Процесс при этом жив, поэтому systemd не перезапускал сервис.
+    ///
+    /// Переопределение — страховка: ограничение останется, даже если Mirror обновят и строку
+    /// снова потеряют. Строка в самом Mirror тоже восстановлена.
+    /// </summary>
+    public override void ConfigureHeadlessFrameRate()
+    {
+        if (!Mirror.Utils.IsHeadless())
+            return;
+
+        // В headless vsync бессмыслен, а ненулевое значение перекрывает targetFrameRate.
+        QualitySettings.vSyncCount = 0;
+
+        int rate = headlessTargetFrameRate;
+        if (rate <= 0)
+            rate = sendRate > 0 ? sendRate : 60;
+
+        // Аргумент командной строки важнее инспектора — можно поправить на живом сервере.
+        string fpsArg = CommandLineArg("-fps");
+        if (!string.IsNullOrWhiteSpace(fpsArg) &&
+            int.TryParse(fpsArg, out int fpsFromArgs) && fpsFromArgs > 0)
+        {
+            rate = fpsFromArgs;
+        }
+
+        Application.targetFrameRate = rate;
+
+        Debug.Log($"[X1NetworkManager] Headless-сервер: Application.targetFrameRate = {rate} Гц " +
+                  $"(sendRate = {sendRate}). Без этого ограничения сервер «захлёбывается» на 2+ игроках.");
+    }
+
     #endregion
 
     #region Колбэки сервера
@@ -205,6 +259,15 @@ public class X1NetworkManager : NetworkManager
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
+        // Понятная причина в логе сервера вместо NullReferenceException из Instantiate(null).
+        if (playerPrefab == null)
+        {
+            Debug.LogError("[X1NetworkManager] playerPrefab не назначен в NetworkManager — игрок не может быть создан. " +
+                           "Назначьте префаб в инспекторе на объекте NetworkManager в сцене MainMenu.");
+            conn.Disconnect();
+            return;
+        }
+
         // Сначала штатные NetworkStartPosition, потом точки с тегом "Respawn" (их используют сцены проекта).
         Transform startPos = GetStartPosition();
         if (startPos == null)
@@ -225,6 +288,16 @@ public class X1NetworkManager : NetworkManager
     {
         Debug.Log($"[X1NetworkManager] Клиент отключился: connId={conn.connectionId}");
         base.OnServerDisconnect(conn);
+    }
+
+    /// <summary>
+    /// Ошибки транспорта на сервере. Без этого обрыв выглядит как «сервер просто перестал работать»:
+    /// в логе нет ни причины, ни номера соединения.
+    /// </summary>
+    public override void OnServerError(NetworkConnectionToClient conn, TransportError error, string reason)
+    {
+        base.OnServerError(conn, error, reason);
+        Debug.LogWarning($"[X1NetworkManager] Ошибка транспорта на сервере: connId={conn?.connectionId}, {error} — {reason}");
     }
 
     private static Transform GetRandomRespawnPoint()
