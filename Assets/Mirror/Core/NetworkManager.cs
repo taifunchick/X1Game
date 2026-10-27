@@ -667,6 +667,11 @@ namespace Mirror
         {
             if (Utils.IsHeadless())
             {
+                // X1FIX: эта строка была потеряна при локальной правке Mirror (единственное
+                // отличие от апстрима v96.0.1). Без неё выделенный сервер работает без
+                // ограничения FPS — тысячи кадров в секунду, 100% ядра и непрерывный GC.
+                // Дублируется в X1NetworkManager.ConfigureHeadlessFrameRate().
+                Application.targetFrameRate = sendRate;
                 // Debug.Log($"Server Tick Rate set to {Application.targetFrameRate} Hz.");
             }
         }

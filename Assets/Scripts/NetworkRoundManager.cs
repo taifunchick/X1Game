@@ -26,6 +26,9 @@ public class NetworkRoundManager : NetworkBehaviour
     [SyncVar] public double endTime;
     [SyncVar(hook = nameof(OnFinishedChanged))] public bool finished;
 
+    // Последняя показанная секунда — чтобы не перестраивать текст TMP каждый кадр.
+    private int _shownSeconds = -1;
+
     private void Awake()
     {
         Instance = this;
@@ -46,7 +49,11 @@ public class NetworkRoundManager : NetworkBehaviour
 
     private void Update()
     {
-        if (matchFinishedPanel != null && matchFinishedPanel.activeSelf != finished)
+        // На headless-сервере нет ни UI, ни графики: SetActive и перестройка текста TMP
+        // там только жгут кадр и мусорят managed-кучу.
+        bool headless = Mirror.Utils.IsHeadless();
+
+        if (!headless && matchFinishedPanel != null && matchFinishedPanel.activeSelf != finished)
             matchFinishedPanel.SetActive(finished);
 
         if (finished)
@@ -59,8 +66,14 @@ public class NetworkRoundManager : NetworkBehaviour
         }
 
         int seconds = Mathf.Max(0, Mathf.CeilToInt((float)(endTime - NetworkTime.time)));
-        if (timerText != null)
+
+        // Текст обновляем только когда изменилась секунда, а не каждый кадр:
+        // каждое присваивание timerText.text — перестройка меша TMP и лишний мусор.
+        if (!headless && timerText != null && seconds != _shownSeconds)
+        {
+            _shownSeconds = seconds;
             timerText.text = string.Format("{0}:{1:00}", seconds / 60, seconds % 60);
+        }
 
         if (isServer && seconds <= 0)
         {

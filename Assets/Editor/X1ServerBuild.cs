@@ -71,6 +71,9 @@ namespace X1.EditorTools
             if (!ValidateScenes(scenes))
                 return false;
 
+            if (!ValidateHeadlessFrameRate())
+                return false;
+
             Log("=== Сборка выделенного сервера ===");
             Log($"Сцены ({scenes.Length}): {string.Join(", ", scenes)}");
             Log($"Целевая платформа: {BuildTarget.StandaloneLinux64} (Server subtarget)");
@@ -181,6 +184,41 @@ namespace X1.EditorTools
                                  "проверьте, что offlineScene в NetworkManager совпадает.");
 
             return ok;
+        }
+
+        /// <summary>
+        /// Главная причина зависаний сервера — отсутствие ограничения FPS в headless-сборке.
+        /// В Mirror это одна строка Application.targetFrameRate = sendRate, и её уже один раз
+        /// потеряли при локальной правке. Проверяем, что ограничение есть хотя бы в одном из
+        /// двух мест (Mirror или X1NetworkManager), иначе сборку сервера не выпускаем.
+        /// </summary>
+        private static bool ValidateHeadlessFrameRate()
+        {
+            bool inMirror = SourceContains("Assets/Mirror/Core/NetworkManager.cs", "Application.targetFrameRate");
+            bool inX1Manager = SourceContains("Assets/Scripts/X1NetworkManager.cs", "Application.targetFrameRate");
+
+            if (inMirror || inX1Manager)
+                return true;
+
+            Debug.LogError("[X1ServerBuild] В проекте пропало ограничение частоты кадров headless-сервера " +
+                           "(Application.targetFrameRate). Без него сервер крутит тысячи кадров в секунду " +
+                           "и перестаёт обрабатывать попадания и подключения. Верните строку в " +
+                           "Assets/Mirror/Core/NetworkManager.cs (ConfigureHeadlessFrameRate) или в X1NetworkManager.");
+            return false;
+        }
+
+        private static bool SourceContains(string relativePath, string text)
+        {
+            try
+            {
+                string fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", relativePath));
+                return File.Exists(fullPath) && File.ReadAllText(fullPath).Contains(text);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[X1ServerBuild] Не удалось проверить {relativePath}: {e.Message}");
+                return false;
+            }
         }
 
         private static bool RequireScene(string[] scenes, string sceneName, string error)

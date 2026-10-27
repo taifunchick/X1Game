@@ -45,6 +45,10 @@ public class LasertagScoreManager : NetworkBehaviour
 
     void Update()
     {
+        // На headless-сервере текст некому показывать: Refresh() только жжёт кадр.
+        if (Mirror.Utils.IsHeadless())
+            return;
+
         Refresh();
     }
 

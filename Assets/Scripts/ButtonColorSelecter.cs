@@ -35,6 +35,10 @@ public class ButtonColorSelecter : NetworkBehaviour
 
     private void Update()
     {
+        // Курсор и панели выбора — только на клиенте. На headless-сервере этого нет.
+        if (Mirror.Utils.IsHeadless())
+            return;
+
         // Пока панель выбора открыта — курсор всегда виден.
         // Это перекрывает Character.Awake, который лочит курсор при спавне игрока.
         if (!_teamChosen && _colorSelecter != null && _colorSelecter.activeInHierarchy)

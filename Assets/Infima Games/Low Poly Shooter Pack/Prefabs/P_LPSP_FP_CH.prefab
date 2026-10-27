@@ -974,6 +974,7 @@ GameObject:
   - component: {fileID: 7516210969309117260}
   - component: {fileID: -2938132758106887252}
   - component: {fileID: -6536326352388606332}
+  - component: {fileID: 776197498869582004}
   m_Layer: 10
   m_Name: P_LPSP_FP_CH
   m_TagString: Player
@@ -11112,3 +11113,30 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 7447013278991346388}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &776197498869582004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2751027687307977091}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e11411e3806046f3a4a6f253903d21da, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RobotAvatar
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _skinPrefab: {fileID: 0}
+  _jerseyObjectName: Jersey
+  _hideForLocalPlayer: 1
+  _hideLegacyCapsule: 1
+  _scale: 1
+  _offset: {x: 0, y: 0, z: 0}
+  _redJersey: {r: 0.85, g: 0.13, b: 0.13, a: 1}
+  _blueJersey: {r: 0.13, g: 0.33, b: 0.9, a: 1}
+  _neutralJersey: {r: 0.72, g: 0.73, b: 0.76, a: 1}
+  _trousersColor: {r: 0.13, g: 0.14, b: 0.17, a: 1}
+  _metalColor: {r: 0.62, g: 0.64, b: 0.68, a: 1}
+  _visorColor: {r: 0.1, g: 0.8, b: 0.9, a: 1}
