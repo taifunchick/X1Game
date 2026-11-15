@@ -30,11 +30,8 @@ public class MultiTouchMobileInput : MonoBehaviour
     private int _activeLookTouchId = -1;
     private Vector2 _lastTouchPosition;
 
-    // Пальцы на любом UI/джойстике (чтобы скрипт свайпа их игнорировал)
     private readonly HashSet<int> _uiFingers = new HashSet<int>();
-    // Пальцы на левом джойстике
     private readonly HashSet<int> _moveJoystickFingers = new HashSet<int>();
-    // Пальцы на правом джойстике (камеры)
     private readonly HashSet<int> _lookJoystickFingers = new HashSet<int>();
 
     private int _lastMoveJoystickActivityFrame = -1;
@@ -50,18 +47,10 @@ public class MultiTouchMobileInput : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
 
-        // Отключаем трансляцию тачей в мышь для старого Input Manager
         Input.simulateMouseWithTouches = false;
-
 #if ENABLE_INPUT_SYSTEM
-        // Отключаем трансляцию тачей в мышь для нового Input System
-        try
-        {
-            UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.Disable();
-        }
-        catch { }
+        try { UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.Disable(); } catch { }
 #endif
-        Debug.Log("[MTMI] Input simulation disabled.");
     }
 
     private void Start()
@@ -77,10 +66,8 @@ public class MultiTouchMobileInput : MonoBehaviour
         foreach (var j in FindObjectsOfType<UIVirtualJoystick>(true))
         {
             string n = j.transform.name;
-            if (isMove && (n.Contains("Move") || n.Contains("Movement")))
-                return j.transform as RectTransform;
-            if (!isMove && (n.Contains("Look") || n.Contains("Camera")))
-                return j.transform as RectTransform;
+            if (isMove && (n.Contains("Move") || n.Contains("Movement"))) return j.transform as RectTransform;
+            if (!isMove && (n.Contains("Look") || n.Contains("Camera"))) return j.transform as RectTransform;
         }
         return null;
     }
@@ -100,16 +87,12 @@ public class MultiTouchMobileInput : MonoBehaviour
 
     private void Update()
     {
-        // ДИНАМИЧЕСКИЙ ПОИСК ИГРОКА (так как Mirror спавнит его позже)
         if (NetworkClient.localPlayer != null)
         {
             if (starterAssetsInputs == null)
             {
                 starterAssetsInputs = NetworkClient.localPlayer.GetComponent<StarterAssetsInputs>();
-                if (starterAssetsInputs != null)
-                {
-                    starterAssetsInputs.cursorInputForLook = false;
-                }
+                if (starterAssetsInputs != null) starterAssetsInputs.cursorInputForLook = false;
             }
 
 #if ENABLE_INPUT_SYSTEM
@@ -119,10 +102,7 @@ public class MultiTouchMobileInput : MonoBehaviour
                 if (_playerInput != null)
                 {
                     var lookAction = _playerInput.actions?.FindAction("Look");
-                    if (lookAction != null)
-                    {
-                        lookAction.Disable();
-                    }
+                    if (lookAction != null) lookAction.Disable();
                 }
             }
 #endif
@@ -144,21 +124,17 @@ public class MultiTouchMobileInput : MonoBehaviour
 
         if (isLookJoystickActive)
         {
-            // Правый джойстик активен. Ничего не делаем, пусть UICanvasControllerInput 
-            // сам плавно передаёт данные в камеру и крутит её бесконечно.
+            // Джойстик камеры активен. Не мешаем ему.
         }
         else if (_activeLookTouchId != -1)
         {
-            // Свайп по пустому экрану активен.
-            if (starterAssetsInputs != null)
-                starterAssetsInputs.LookInput(_currentLookInput);
+            // Свайп по пустому экрану. Передаем обе оси (X и Y).
+            ApplyCharacterLook(_currentLookInput);
         }
         else
         {
-            // Ни джойстика, ни свайпа. Сбрасываем камеру в ноль, чтобы она не крутилась.
-            ForceClearCharacterLook();
-            if (starterAssetsInputs != null)
-                starterAssetsInputs.LookInput(Vector2.zero);
+            // Сброс, если ничего не нажато.
+            ApplyCharacterLook(Vector2.zero);
         }
     }
 
@@ -179,8 +155,7 @@ public class MultiTouchMobileInput : MonoBehaviour
             Touch touch = Input.GetTouch(i);
             int fid = touch.fingerId;
 
-            if (_uiFingers.Contains(fid))
-                continue;
+            if (_uiFingers.Contains(fid)) continue;
 
             if (touch.phase == UnityEngine.TouchPhase.Ended || touch.phase == UnityEngine.TouchPhase.Canceled)
             {
@@ -203,6 +178,8 @@ public class MultiTouchMobileInput : MonoBehaviour
             {
                 Vector2 delta = touch.position - _lastTouchPosition;
                 _lastTouchPosition = touch.position;
+                
+                // Здесь мы считаем обе оси для свайпа
                 _currentLookInput.x = delta.x * lookSensitivity * 0.012f;
                 _currentLookInput.y = delta.y * lookSensitivity * 0.012f;
             }
@@ -228,9 +205,7 @@ public class MultiTouchMobileInput : MonoBehaviour
         for (int i = 0; i < Input.touchCount; i++)
         {
             Touch t = Input.GetTouch(i);
-            if (t.fingerId == fingerId &&
-                t.phase != UnityEngine.TouchPhase.Ended &&
-                t.phase != UnityEngine.TouchPhase.Canceled)
+            if (t.fingerId == fingerId && t.phase != UnityEngine.TouchPhase.Ended && t.phase != UnityEngine.TouchPhase.Canceled)
                 return true;
         }
         return false;
@@ -257,8 +232,7 @@ public class MultiTouchMobileInput : MonoBehaviour
             return;
         }
 
-        bool moveJoyActiveThisFrame = _lastMoveJoystickActivityFrame >= 0 &&
-                                       (Time.frameCount - _lastMoveJoystickActivityFrame) <= 1;
+        bool moveJoyActiveThisFrame = _lastMoveJoystickActivityFrame >= 0 && (Time.frameCount - _lastMoveJoystickActivityFrame) <= 1;
 
         for (int i = 0; i < Input.touchCount; i++)
         {
@@ -275,16 +249,8 @@ public class MultiTouchMobileInput : MonoBehaviour
             if (overMoveJoy || overLookJoy || overUI || (Input.touchCount == 1 && moveJoyActiveThisFrame))
             {
                 _uiFingers.Add(fid);
-                
-                if (overMoveJoy || (Input.touchCount == 1 && moveJoyActiveThisFrame))
-                {
-                    _moveJoystickFingers.Add(fid);
-                }
-
-                if (overLookJoy)
-                {
-                    _lookJoystickFingers.Add(fid);
-                }
+                if (overMoveJoy || (Input.touchCount == 1 && moveJoyActiveThisFrame)) _moveJoystickFingers.Add(fid);
+                if (overLookJoy) _lookJoystickFingers.Add(fid);
             }
         }
     }
@@ -295,16 +261,14 @@ public class MultiTouchMobileInput : MonoBehaviour
 
         RectTransform hitRect = rt;
         var joystick = rt.GetComponent<UIVirtualJoystick>();
-        if (joystick != null && joystick.containerRect != null)
-            hitRect = joystick.containerRect;
+        if (joystick != null && joystick.containerRect != null) hitRect = joystick.containerRect;
 
         Canvas canvas = hitRect.GetComponentInParent<Canvas>();
         Camera cam = null;
         if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
             cam = canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
 
-        if (RectTransformUtility.RectangleContainsScreenPoint(hitRect, screenPos, cam))
-            return true;
+        if (RectTransformUtility.RectangleContainsScreenPoint(hitRect, screenPos, cam)) return true;
 
         Vector3[] corners = new Vector3[4];
         hitRect.GetWorldCorners(corners);
@@ -314,20 +278,22 @@ public class MultiTouchMobileInput : MonoBehaviour
         return Vector2.Distance(screenPos, screenCenter) <= buffer;
     }
 
-    private void ForceClearCharacterLook()
+    private void ApplyCharacterLook(Vector2 look)
     {
-        if (starterAssetsInputs == null) return;
+        if (starterAssetsInputs != null)
+            starterAssetsInputs.LookInput(look);
 
         var localPlayer = NetworkClient.localPlayer;
-        if (localPlayer == null) return;
+        if (localPlayer != null)
+        {
+            var character = localPlayer.GetComponent<InfimaGames.LowPolyShooterPack.Character>();
+            if (character != null)
+            {
+                if (_axisLookField == null)
+                    _axisLookField = typeof(InfimaGames.LowPolyShooterPack.Character).GetField("axisLook", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        var character = localPlayer.GetComponent<InfimaGames.LowPolyShooterPack.Character>();
-        if (character == null) return;
-
-        if (_axisLookField == null)
-            _axisLookField = typeof(InfimaGames.LowPolyShooterPack.Character)
-                .GetField("axisLook", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        _axisLookField?.SetValue(character, Vector2.zero);
+                _axisLookField?.SetValue(character, look);
+            }
+        }
     }
 }

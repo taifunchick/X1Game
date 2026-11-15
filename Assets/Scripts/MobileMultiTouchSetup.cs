@@ -5,10 +5,10 @@ using StarterAssets;
 public class MobileMultiTouchSetup : MonoBehaviour
 {
     [Header("Canvas References")]
-    [Tooltip("Канвас с джойстиками. В инспекторе ОЧИСТИ это поле, пусть ищет сам.")]
+    [Tooltip("Очисти это поле в инспекторе, пусть ищет сам (None)")]
     public GameObject joystickCanvas;
 
-    [Tooltip("Канвас с TouchZone. В инспекторе ОЧИСТИ это поле, пусть ищет сам.")]
+    [Tooltip("Очисти это поле в инспекторе, пусть ищет сам (None)")]
     public GameObject touchZoneCanvas;
 
     [Header("Multi-Touch Look Settings")]
@@ -23,6 +23,7 @@ public class MobileMultiTouchSetup : MonoBehaviour
         if (touchZoneCanvas == null) touchZoneCanvas = FindCanvasByName("TouchZone");
 
         ApplyPlatformVisibility();
+        DisableLookTouchZone(); // ВАЖНО: отключаем старую зону свайпа, чтобы работал MultiTouchMobileInput
         SetupMultiTouchInput();
 
         Debug.Log("[MobileMultiTouchSetup] Configuration complete.");
@@ -58,6 +59,23 @@ public class MobileMultiTouchSetup : MonoBehaviour
             root.SetActive(active);
     }
 
+    private void DisableLookTouchZone()
+    {
+        GameObject root = ResolveCanvasRoot(touchZoneCanvas);
+        if (root == null) return;
+        if (!root.activeSelf) return;
+
+        var transforms = root.GetComponentsInChildren<Transform>(true);
+        foreach (var child in transforms)
+        {
+            if (child.name.Contains("Look") && child.gameObject.activeSelf)
+            {
+                child.gameObject.SetActive(false);
+                Debug.Log("[MobileMultiTouchSetup] Disabled old TouchZone: " + child.name);
+            }
+        }
+    }
+
     private void SetupMultiTouchInput()
     {
         MultiTouchMobileInput mtInput = FindObjectOfType<MultiTouchMobileInput>();
@@ -84,8 +102,7 @@ public class MobileMultiTouchSetup : MonoBehaviour
     {
         foreach (GameObject go in FindObjectsOfType<GameObject>(true))
         {
-            if (go.name.Contains(namePart) &&
-                (go.GetComponent<Canvas>() != null || go.GetComponentInParent<Canvas>() != null))
+            if (go.name.Contains(namePart) && (go.GetComponent<Canvas>() != null || go.GetComponentInParent<Canvas>() != null))
                 return go;
         }
         return null;
