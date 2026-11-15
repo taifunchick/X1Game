@@ -75,8 +75,9 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private void LateUpdate()
         {
-            //Frame Input. The Input to add this frame!
-            Vector2 frameInput = playerCharacter.IsCursorLocked() ? playerCharacter.GetInputLook() : default;
+            //Frame Input. The Input to add this frame! Always use look input from the player;
+            //this keeps mouse drag working even while the cursor is locked.
+            Vector2 frameInput = playerCharacter.GetInputLook();
             //Sensitivity.
             frameInput *= sensitivity;
 
