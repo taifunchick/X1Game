@@ -26,7 +26,12 @@ public class MobileMultiTouchSetup : MonoBehaviour
         DisableLookTouchZone(); // ВАЖНО: отключаем старую зону свайпа, чтобы работал MultiTouchMobileInput
         SetupMultiTouchInput();
 
-        Debug.Log("[MobileMultiTouchSetup] Configuration complete.");
+        Debug.Log(string.Format(
+            "[MobileMultiTouchSetup] Configuration complete. mobileUI={0}, platform={1}, isMobilePlatform={2}, webglMobileBrowser={3}, joystickCanvas={4}, touchZoneCanvas={5}",
+            ShouldMobileUIBeActive(), Application.platform, Application.isMobilePlatform,
+            IsWebGLMobileBrowser(),
+            joystickCanvas != null ? joystickCanvas.name : "null",
+            touchZoneCanvas != null ? touchZoneCanvas.name : "null"));
     }
 
     private void ApplyPlatformVisibility()
@@ -41,12 +46,19 @@ public class MobileMultiTouchSetup : MonoBehaviour
 #if UNITY_EDITOR
         return true;
 #else
+        // На настоящих мобильных платформах (Android / iOS сборки) всё просто.
         if (Application.isMobilePlatform) return true;
+
         if (Application.platform == RuntimePlatform.WebGLPlayer)
         {
-            if (IsWebGLMobileBrowser()) return true;
-            return Input.touchSupported;
+            // В WebGL Application.isMobilePlatform всегда возвращает false, даже
+            // когда сборка открыта на iPhone или Android — платформа там WebGLPlayer.
+            // Поэтому единственный надёжный способ узнать, что мы на мобильном —
+            // спросить браузер (userAgent + тач + тип указателя) через JS-плагин.
+            // Никаких проверок размера экрана в пикселях: они неточны.
+            return IsWebGLMobileBrowser();
         }
+
         return false;
 #endif
     }
