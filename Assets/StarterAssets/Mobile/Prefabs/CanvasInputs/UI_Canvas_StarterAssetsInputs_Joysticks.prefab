@@ -20,7 +20,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &597308369130767402
 RectTransform:
   m_ObjectHideFlags: 0
@@ -126,6 +126,8 @@ MonoBehaviour:
   syncInterval: 0
   starterAssetsInputs: {fileID: 0}
   cameraJoystickSensivity: 1
+  forceShowMobileControlsInEditor: 0
+  mobileRoot: {fileID: 0}
 --- !u!114 &6950459998490059851
 MonoBehaviour:
   m_ObjectHideFlags: 0

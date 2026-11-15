@@ -7,6 +7,7 @@ public class NameOnPerson : NetworkBehaviour
     [SyncVar(hook = nameof(OnNameChanged))] private string _name = "Player";
 
     [SerializeField] private TextMeshProUGUI _nameText;
+    [SerializeField] private bool billboardToCamera = true;
 
     public override void OnStartClient()
     {
@@ -54,6 +55,37 @@ public class NameOnPerson : NetworkBehaviour
             playerName = MaxAuthenticators.Instance.playerName;
 
         CmdSetName(playerName);
+    }
+
+    private void LateUpdate()
+    {
+        if (!billboardToCamera || _nameText == null)
+            return;
+
+        Camera cam = GetActiveCamera();
+        if (cam == null)
+            return;
+
+        Transform billboardRoot = _nameText.transform.parent != null ? _nameText.transform.parent : transform;
+        Vector3 directionToCamera = cam.transform.position - billboardRoot.position;
+        if (directionToCamera.sqrMagnitude < 0.001f)
+            return;
+
+        billboardRoot.rotation = Quaternion.LookRotation(directionToCamera, Vector3.up);
+    }
+
+    private static Camera GetActiveCamera()
+    {
+        if (Camera.main != null && Camera.main.gameObject.activeInHierarchy)
+            return Camera.main;
+
+        foreach (Camera cam in Camera.allCameras)
+        {
+            if (cam != null && cam.enabled && cam.gameObject.activeInHierarchy)
+                return cam;
+        }
+
+        return null;
     }
 
     private static string NormalizeName(string name)

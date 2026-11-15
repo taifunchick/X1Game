@@ -709,28 +709,7 @@
                     "isComposite": true,
                     "isPartOfComposite": false
                 },
-                {
-                    "name": "negative",
-                    "id": "59413d97-c602-4903-aad8-4431c1a75e61",
-                    "path": "<Keyboard>/q",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Leaning",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "positive",
-                    "id": "175d3f8c-31d0-4904-b1d8-63260c5ea0ad",
-                    "path": "<Keyboard>/e",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Leaning",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
+
                 {
                     "name": "",
                     "id": "307728e7-3fce-4425-8ef6-4c59a83c83ae",

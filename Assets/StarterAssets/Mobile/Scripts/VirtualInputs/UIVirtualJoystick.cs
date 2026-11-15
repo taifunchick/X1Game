@@ -13,12 +13,27 @@ public class UIVirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandle
 
     [Header("Settings")]
     public float joystickRange = 50f;
+    [Tooltip("Основной коэффициент чувствительности джойстика.")]
     public float magnitudeMultiplier = 1f;
+    [Tooltip("Дополнительный коэффициент чувствительности для этого конкретного джойстика.")]
+    public float inputSensitivity = 1f;
+    [Tooltip("Если включено — джойстик принимает только горизонтальный ввод.")]
+    public bool horizontalOnly = true;
     public bool invertXOutputValue;
     public bool invertYOutputValue;
 
     [Header("Output")]
     public Event joystickOutputEvent;
+
+    // ---------------------------------------------------------------------
+    // Публичное состояние (для MultiTouchMobileInput и др.)
+    // ---------------------------------------------------------------------
+
+    /// <summary>Джойстик сейчас перетаскивается пальцем/мышью.</summary>
+    public bool IsDragging { get; private set; }
+
+    /// <summary>PointerId пальца, который сейчас держит джойстик (-1 если нет).</summary>
+    public int ActivePointerId { get; private set; } = -1;
 
     void Start()
     {
@@ -27,44 +42,54 @@ public class UIVirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandle
 
     private void SetupHandle()
     {
-        if(handleRect)
-        {
+        if (handleRect)
             UpdateHandleRectPosition(Vector2.zero);
-        }
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        IsDragging = true;
+        ActivePointerId = eventData.pointerId;
         OnDrag(eventData);
     }
 
     public void OnDrag(PointerEventData eventData)
     {
+        // Если пришёл чужой палец (не тот, что начал drag) — игнорируем.
+        if (IsDragging && ActivePointerId != -1 && ActivePointerId != eventData.pointerId)
+            return;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(containerRect, eventData.position, eventData.pressEventCamera, out Vector2 position);
         
         position = ApplySizeDelta(position);
         
-        Vector2 clampedPosition = ClampValuesToMagnitude(position);
+        if (horizontalOnly)
+            position.y = 0f;
 
+        Vector2 clampedPosition = ClampValuesToMagnitude(position);
         Vector2 outputPosition = ApplyInversionFilter(position);
 
-        OutputPointerEventValue(outputPosition * magnitudeMultiplier);
-
-        if(handleRect)
+        if (horizontalOnly)
         {
-            UpdateHandleRectPosition(clampedPosition * joystickRange);
+            outputPosition.y = 0f;
+            clampedPosition.y = 0f;
         }
-        
+
+        OutputPointerEventValue(outputPosition * magnitudeMultiplier * inputSensitivity);
+
+        if (handleRect)
+            UpdateHandleRectPosition(clampedPosition * joystickRange);
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
-        OutputPointerEventValue(Vector2.zero);
-
-        if(handleRect)
+        if (ActivePointerId == eventData.pointerId || ActivePointerId == -1)
         {
-             UpdateHandleRectPosition(Vector2.zero);
+            IsDragging = false;
+            ActivePointerId = -1;
+            OutputPointerEventValue(Vector2.zero);
+            if (handleRect)
+                UpdateHandleRectPosition(Vector2.zero);
         }
     }
 
@@ -75,13 +100,13 @@ public class UIVirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandle
 
     private void UpdateHandleRectPosition(Vector2 newPosition)
     {
-        handleRect.anchoredPosition = newPosition;
+        if (handleRect) handleRect.anchoredPosition = newPosition;
     }
 
     Vector2 ApplySizeDelta(Vector2 position)
     {
-        float x = (position.x/containerRect.sizeDelta.x) * 2.5f;
-        float y = (position.y/containerRect.sizeDelta.y) * 2.5f;
+        float x = (position.x / containerRect.sizeDelta.x) * 2.5f;
+        float y = (position.y / containerRect.sizeDelta.y) * 2.5f;
         return new Vector2(x, y);
     }
 
@@ -92,22 +117,10 @@ public class UIVirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandle
 
     Vector2 ApplyInversionFilter(Vector2 position)
     {
-        if(invertXOutputValue)
-        {
-            position.x = InvertValue(position.x);
-        }
-
-        if(invertYOutputValue)
-        {
-            position.y = InvertValue(position.y);
-        }
-
+        if (invertXOutputValue) position.x = InvertValue(position.x);
+        if (invertYOutputValue) position.y = InvertValue(position.y);
         return position;
     }
 
-    float InvertValue(float value)
-    {
-        return -value;
-    }
-    
+    float InvertValue(float value) => -value;
 }

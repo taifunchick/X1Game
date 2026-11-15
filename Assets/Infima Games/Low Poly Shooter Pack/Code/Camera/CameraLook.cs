@@ -80,7 +80,8 @@ namespace InfimaGames.LowPolyShooterPack
             //Sensitivity.
             frameInput *= sensitivity;
 
-            //Yaw.
+            // Никакого жёсткого сброса pitch при нулевом input: вертикальный наворот
+            // должен работать нормально, а не возвращаться в исходную позицию.
             Quaternion rotationYaw = Quaternion.Euler(0.0f, frameInput.x, 0.0f);
             //Pitch.
             Quaternion rotationPitch = Quaternion.Euler(-frameInput.y, 0.0f, 0.0f);

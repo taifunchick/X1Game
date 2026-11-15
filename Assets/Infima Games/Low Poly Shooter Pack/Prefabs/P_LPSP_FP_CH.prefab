@@ -481,6 +481,7 @@ GameObject:
   - component: {fileID: 8994093810030732143}
   - component: {fileID: 5303656511044957216}
   - component: {fileID: 6351981316280825258}
+  - component: {fileID: 6667838483933251455}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -572,6 +573,20 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &6667838483933251455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204542974666954202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fd27f5f4ac82834d9f64a5892221353, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CanvasLookAtCamera
+  lookAtCameraPosition: 0
+  updateInterval: 0
 --- !u!1 &1405929423710572232
 GameObject:
   m_ObjectHideFlags: 0
@@ -1788,6 +1803,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   _nameText: {fileID: 2028501674538029701}
+  billboardToCamera: 1
 --- !u!114 &-6536326352388606332
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3045,13 +3061,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4840516828315414681}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2820986460518622199}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 10.7}

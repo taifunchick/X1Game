@@ -34,7 +34,7 @@ namespace StarterAssets
         private static FieldInfo holdingButtonRunField;
         private static FieldInfo cursorLockedField;
 
-        [SerializeField] private float cameraJoystickSensivity = 1f;
+        [SerializeField] public float cameraJoystickSensivity = 1f;
 
         [Header("Editor debug")]
         [Tooltip("Для теста мобильного UI в редакторе/на ПК. В новой логике редактор всегда показывает мобильный UI, а ПК-билд — нет.")]
@@ -224,6 +224,9 @@ namespace StarterAssets
 
         private void ApplyCharacterLook(Vector2 input)
         {
+            // Для look-джойстика нулевой ввод нужно сбрасывать, иначе при отпускании
+            // рукоятки камера продолжает вращаться до предела ("залипание" в сторону).
+            // Swipe-свайп в правой зоне не использует этот путь, поэтому он не затрагивается.
             EnsureCursorLocked();
 
             if (character == null || axisLookField == null)
@@ -258,7 +261,10 @@ namespace StarterAssets
 
         public void VirtualLookInput(Vector2 virtualLookDirection)
         {
-            Vector2 look = Vector2.ClampMagnitude(virtualLookDirection * cameraJoystickSensivity, 1f);
+            Vector2 look = Vector2.ClampMagnitude(new Vector2(
+                virtualLookDirection.x,
+                0f) * cameraJoystickSensivity,
+                1f);
 
             if (starterAssetsInputs != null)
                 starterAssetsInputs.LookInput(look);
