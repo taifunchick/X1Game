@@ -12,6 +12,15 @@ mergeInto(LibraryManager.library, {
   // поэтому панель всё равно покажется на телефоне. См. Assets/Scripts/X1DeviceDetect.cs.
   IsMobileBrowser: function () {
     try {
+      // Проба канала: если этой строки (и лога ниже с входными данными) НЕТ
+      // в консоли браузера при запуске, значит MobileDetect.jslib НЕ
+      // слинкован в сборку (чаще всего сломан .meta — нет секции
+      // PluginImporter с WebGL: enabled:1). Проверь .meta и пересобери.
+      // ВАЖНО: лог обязан быть ВНУТРИ функции. console.log на верхнем уровне
+      // .jslib выполняется при генерации JS-символов Emscripten, засоряет
+      // stdout, который emcc парсит как JSON, и роняет билд с
+      // JSONDecodeError: Expecting value: line 1 column 2 (char 1).
+      console.log('[MobileDetect] MobileDetect.jslib включён в сборку');
       var ua = (navigator.userAgent || navigator.vendor || window.opera || '').toString();
 
       // Классические мобильные/планшетные токены в userAgent
@@ -42,8 +51,3 @@ mergeInto(LibraryManager.library, {
   }
 
 });
-
-// Проба канала: если этой строки НЕТ в консоли браузера при запуске,
-// значит MobileDetect.jslib НЕ слинкован в сборку (чаще всего сломан .meta —
-// нет секции PluginImporter с WebGL: enabled:1). Проверь .meta и пересобери.
-console.log('[MobileDetect] MobileDetect.jslib включён в сборку');
