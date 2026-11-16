@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.InteropServices;
 using Mirror;
 using UnityEngine;
 using InfimaGames.LowPolyShooterPack;
@@ -27,25 +26,6 @@ namespace StarterAssets
         [Header("Mobile root")]
         public GameObject mobileRoot;
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-        [DllImport("__Internal")]
-        private static extern int IsMobileBrowser();
-#endif
-
-        private static bool DetectWebGLMobileBrowser()
-        {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            try { return IsMobileBrowser() == 1; }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning("[UICanvasControllerInput] IsMobileBrowser() failed: " + e.Message);
-                return false;
-            }
-#else
-            return false;
-#endif
-        }
-
         private GameObject GetMobileRoot()
         {
             return mobileRoot != null ? mobileRoot : gameObject;
@@ -54,10 +34,9 @@ namespace StarterAssets
         private bool ShouldShowMobileControls()
         {
             if (Application.isEditor) return forceShowMobileControlsInEditor;
-            if (Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld) return true;
-            if (Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.IPhonePlayer) return true;
-            if (Application.platform == RuntimePlatform.WebGLPlayer) return DetectWebGLMobileBrowser();
-            return false;
+            // Единый закэшированный детектор (jslib + touchSupported + InputSystem),
+            // см. Assets/Scripts/X1DeviceDetect.cs. Ничего не делает «молча».
+            return X1DeviceDetect.IsMobileDevice();
         }
 
         private void Awake()

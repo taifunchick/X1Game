@@ -27,11 +27,18 @@ public class MobileMultiTouchSetup : MonoBehaviour
         SetupMultiTouchInput();
 
         Debug.Log(string.Format(
-            "[MobileMultiTouchSetup] Configuration complete. mobileUI={0}, platform={1}, isMobilePlatform={2}, webglMobileBrowser={3}, joystickCanvas={4}, touchZoneCanvas={5}",
+            "[MobileMultiTouchSetup] Configuration complete. mobileUI={0}, platform={1}, isMobilePlatform={2}, deviceDetect={3}, joystickCanvas={4}, touchZoneCanvas={5}",
             ShouldMobileUIBeActive(), Application.platform, Application.isMobilePlatform,
-            IsWebGLMobileBrowser(),
+            X1DeviceDetect.IsMobileDevice(),
             joystickCanvas != null ? joystickCanvas.name : "null",
             touchZoneCanvas != null ? touchZoneCanvas.name : "null"));
+    }
+
+    private static bool ShouldMobileUIBeActive()
+    {
+        // Единый детектор: jslib + touchSupported + InputSystem (с кэшированием и логами).
+        // Никогда не возвращаем false «молча» из-за сломанного jslib — фолбэки решат.
+        return X1DeviceDetect.IsMobileDevice();
     }
 
     private void ApplyPlatformVisibility()
@@ -39,28 +46,6 @@ public class MobileMultiTouchSetup : MonoBehaviour
         bool active = ShouldMobileUIBeActive();
         SetCanvasActive(joystickCanvas, active);
         SetCanvasActive(touchZoneCanvas, active);
-    }
-
-    private static bool ShouldMobileUIBeActive()
-    {
-#if UNITY_EDITOR
-        return true;
-#else
-        // На настоящих мобильных платформах (Android / iOS сборки) всё просто.
-        if (Application.isMobilePlatform) return true;
-
-        if (Application.platform == RuntimePlatform.WebGLPlayer)
-        {
-            // В WebGL Application.isMobilePlatform всегда возвращает false, даже
-            // когда сборка открыта на iPhone или Android — платформа там WebGLPlayer.
-            // Поэтому единственный надёжный способ узнать, что мы на мобильном —
-            // спросить браузер (userAgent + тач + тип указателя) через JS-плагин.
-            // Никаких проверок размера экрана в пикселях: они неточны.
-            return IsWebGLMobileBrowser();
-        }
-
-        return false;
-#endif
     }
 
     private void SetCanvasActive(GameObject canvas, bool active)
@@ -118,20 +103,5 @@ public class MobileMultiTouchSetup : MonoBehaviour
                 return go;
         }
         return null;
-    }
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-    [System.Runtime.InteropServices.DllImport("__Internal")]
-    private static extern int IsMobileBrowser();
-#endif
-
-    private static bool IsWebGLMobileBrowser()
-    {
-#if UNITY_WEBGL && !UNITY_EDITOR
-        try { return IsMobileBrowser() == 1; }
-        catch { return false; }
-#else
-        return false;
-#endif
     }
 }
