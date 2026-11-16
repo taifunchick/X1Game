@@ -7,3 +7,6 @@ mergeInto(LibraryManager.library, {
         return buffer;
     }
 });
+
+// Проба канала: если этой строки НЕТ в консоли браузера, WebGLBrowserUrl.jslib не в сборке.
+console.log('[WebGLBrowserUrl] WebGLBrowserUrl.jslib включён в сборку');

@@ -69,5 +69,37 @@ class DedicatedServerRegressionTests(unittest.TestCase):
             self.assertIn(component, objects)
 
 
+class WebGLJslibMetaTests(unittest.TestCase):
+    """Дефект «.jslib не попадает в WebGL-сборку» регрессия: без секции PluginImporter
+    с WebGL:enabled:1 Unity плагин в сборку не линкует, и IsMobileBrowser()/
+    GetURLFromBrowser()/X1WebGL_* перестают существовать (DllImport падает,
+    мобильная панель не показывается). Проверяем КАЖДЫЙ .jslib в проекте."""
+
+    def test_every_jslib_meta_enables_webgl(self):
+        jslibs = sorted(ASSETS.rglob('*.jslib'))
+        self.assertTrue(jslibs, 'No .jslib files found under Assets')
+        for jslib in jslibs:
+            meta = Path(str(jslib) + '.meta')
+            self.assertTrue(meta.exists(), f'Missing .meta for {jslib}')
+            content = meta.read_text()
+            self.assertIn('PluginImporter', content, f'{meta} has no PluginImporter section')
+            pattern = re.compile(
+                r'WebGL: WebGL\s*\n\s*second:\s*\n\s*enabled: 1', re.M)
+            self.assertRegex(
+                content,
+                pattern,
+                f'{meta} does not enable the WebGL platform')
+
+    def test_mobile_detection_uses_shared_fallback_detector(self):
+        detector = (ASSETS / 'Scripts/X1DeviceDetect.cs').read_text()
+        for layer in ('IsMobileBrowser', 'Input.touchSupported', 'Touchscreen.current'):
+            self.assertIn(layer, detector)
+        # Оба места, где решается видимость мобильного UI, должны ходить через X1DeviceDetect,
+        # иначе «починили в одном — сломалось в другом».
+        for script in ('Scripts/MobileMultiTouchSetup.cs',
+                       'StarterAssets/Mobile/Scripts/CanvasInputs/UICanvasControllerInput.cs'):
+            self.assertIn('X1DeviceDetect.IsMobileDevice()', (ASSETS / script).read_text())
+
+
 if __name__ == '__main__':
     unittest.main()

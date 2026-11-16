@@ -53,3 +53,6 @@ mergeInto(LibraryManager.library, {
   }
 
 });
+
+// Проба канала: если этой строки НЕТ в консоли браузера, X1WebGL.jslib не в сборке.
+console.log('[X1WebGL] X1WebGL.jslib включён в сборку');
