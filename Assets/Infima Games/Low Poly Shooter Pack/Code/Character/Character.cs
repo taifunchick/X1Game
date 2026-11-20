@@ -1403,7 +1403,7 @@ namespace InfimaGames.LowPolyShooterPack
 		public void OnMove(InputAction.CallbackContext context)
 		{
 			//Read.
-			axisMovement = context.ReadValue<Vector2>();
+			axisMovement = cursorLocked ? context.ReadValue<Vector2>() : default;
 		}
 		/// <summary>
 		/// Look.
@@ -1411,7 +1411,7 @@ namespace InfimaGames.LowPolyShooterPack
 		public void OnLook(InputAction.CallbackContext context)
 		{
 			//Read.
-			axisLook = context.ReadValue<Vector2>();
+			axisLook = cursorLocked ? context.ReadValue<Vector2>() : default;
 
 			//Make sure that we have a weapon.
 			if (equippedWeapon == null)

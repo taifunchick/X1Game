@@ -29,8 +29,6 @@ public class MultiTouchMobileInput : MonoBehaviour
     private bool _isDraggingLook;
     private int _activeLookTouchId = -1;
     private Vector2 _lastTouchPosition;
-    private bool _mouseLookActive;
-    private Vector2 _lastMousePosition;
 
     private readonly HashSet<int> _uiFingers = new HashSet<int>();
     private readonly HashSet<int> _moveJoystickFingers = new HashSet<int>();
@@ -89,10 +87,14 @@ public class MultiTouchMobileInput : MonoBehaviour
 
     private void Update()
     {
-        ResolveStarterAssetsInputs();
-
         if (NetworkClient.localPlayer != null)
         {
+            if (starterAssetsInputs == null)
+            {
+                starterAssetsInputs = NetworkClient.localPlayer.GetComponent<StarterAssetsInputs>();
+                if (starterAssetsInputs != null) starterAssetsInputs.cursorInputForLook = false;
+            }
+
 #if ENABLE_INPUT_SYSTEM
             if (_playerInput == null)
             {
@@ -107,21 +109,6 @@ public class MultiTouchMobileInput : MonoBehaviour
         }
     }
 
-    private void ResolveStarterAssetsInputs()
-    {
-        if (starterAssetsInputs == null)
-        {
-            if (NetworkClient.localPlayer != null)
-                starterAssetsInputs = NetworkClient.localPlayer.GetComponent<StarterAssetsInputs>();
-
-            if (starterAssetsInputs == null)
-                starterAssetsInputs = FindObjectOfType<StarterAssetsInputs>(true);
-        }
-
-        if (starterAssetsInputs != null)
-            starterAssetsInputs.cursorInputForLook = false;
-    }
-
     private void LateUpdate()
     {
         if (Time.time - _lastRefreshTime > 1f)
@@ -134,15 +121,14 @@ public class MultiTouchMobileInput : MonoBehaviour
         ProcessTouches();
 
         bool isLookJoystickActive = _lookJoystickFingers.Count > 0;
-        bool hasActiveLookInput = _activeLookTouchId != -1 || _mouseLookActive;
 
         if (isLookJoystickActive)
         {
             // Джойстик камеры активен. Не мешаем ему.
         }
-        else if (hasActiveLookInput)
+        else if (_activeLookTouchId != -1)
         {
-            // Свайп по пустому экрану или удержание мыши. Передаем обе оси (X и Y).
+            // Свайп по пустому экрану. Передаем обе оси (X и Y).
             ApplyCharacterLook(_currentLookInput);
         }
         else
@@ -208,37 +194,9 @@ public class MultiTouchMobileInput : MonoBehaviour
 
         if (Input.touchCount == 0)
         {
-            Vector2 delta = Vector2.zero;
-
-#if ENABLE_INPUT_SYSTEM
-            var mouse = UnityEngine.InputSystem.Mouse.current;
-            if (mouse != null)
-                delta = mouse.delta.ReadValue();
-#endif
-
-            if (delta == Vector2.zero)
-            {
-                try
-                {
-                    delta = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y"));
-                }
-                catch
-                {
-                    delta = Vector2.zero;
-                }
-            }
-
-            if (delta.sqrMagnitude > 0.01f)
-            {
-                _mouseLookActive = true;
-                _currentLookInput.x = delta.x * lookSensitivity * 0.012f;
-                _currentLookInput.y = delta.y * lookSensitivity * 0.012f;
-            }
-            else
-            {
-                _mouseLookActive = false;
-                _currentLookInput = Vector2.zero;
-            }
+            _activeLookTouchId = -1;
+            _isDraggingLook = false;
+            _currentLookInput = Vector2.zero;
         }
     }
 
@@ -325,18 +283,17 @@ public class MultiTouchMobileInput : MonoBehaviour
         if (starterAssetsInputs != null)
             starterAssetsInputs.LookInput(look);
 
-        var character = NetworkClient.localPlayer != null
-            ? NetworkClient.localPlayer.GetComponent<InfimaGames.LowPolyShooterPack.Character>()
-            : starterAssetsInputs != null
-                ? starterAssetsInputs.GetComponent<InfimaGames.LowPolyShooterPack.Character>()
-                : FindObjectOfType<InfimaGames.LowPolyShooterPack.Character>(true);
-
-        if (character != null)
+        var localPlayer = NetworkClient.localPlayer;
+        if (localPlayer != null)
         {
-            if (_axisLookField == null)
-                _axisLookField = typeof(InfimaGames.LowPolyShooterPack.Character).GetField("axisLook", BindingFlags.Instance | BindingFlags.NonPublic);
+            var character = localPlayer.GetComponent<InfimaGames.LowPolyShooterPack.Character>();
+            if (character != null)
+            {
+                if (_axisLookField == null)
+                    _axisLookField = typeof(InfimaGames.LowPolyShooterPack.Character).GetField("axisLook", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            _axisLookField?.SetValue(character, look);
+                _axisLookField?.SetValue(character, look);
+            }
         }
     }
 }
