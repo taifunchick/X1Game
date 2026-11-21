@@ -2092,9 +2092,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a300d010f57451488aa99000126fbd5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
   starterAssetsInputs: {fileID: 0}
   cameraJoystickSensivity: 1
   forceShowMobileControlsInEditor: 1
@@ -5265,7 +5262,7 @@ RectTransform:
   m_GameObject: {fileID: 6751388635335664449}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 165968716}
@@ -5709,7 +5706,6 @@ GameObject:
   - component: {fileID: 6483554099413214078}
   - component: {fileID: 1557486221006316792}
   - component: {fileID: 1381317547}
-  - component: {fileID: 6950459998211729198}
   - component: {fileID: 6950459998211729199}
   m_Layer: 5
   m_Name: UI_Canvas_StarterAssetsInputs_Joysticks
@@ -5718,23 +5714,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &6950459998211729198
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6751388635335664449}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneId: 1711200501
-  _assetId: 0
-  serverOnly: 0
-  visibility: 0
-  hasSpawned: 0
 --- !u!114 &6950459998211729199
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5747,7 +5726,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e7efacd23055394e9b1310560c29189, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MobileMultiTouchSetup
-  joystickCanvas: {fileID: 0}
+  joystickCanvas: {fileID: 6751388635335664449}
   touchZoneCanvas: {fileID: 0}
   lookSensitivity: 15
   joystickBufferRadius: 80

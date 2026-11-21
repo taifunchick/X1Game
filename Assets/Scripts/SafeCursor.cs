@@ -1,48 +1,15 @@
-using System;
 using UnityEngine;
 #if UNITY_WEBGL && !UNITY_EDITOR
 using System.Runtime.InteropServices;
 #endif
 
-/// <summary>
-/// Безопасная работа с захватом мыши.
-///
-/// Проблема: обычный <c>Cursor.lockState = CursorLockMode.Locked</c> в WebGL вызывает
-/// внутри Unity <c>Module.requestPointerLock()</c> и НЕ подписывается на отказ промиса.
-/// Браузер отклоняет запрос без жеста пользователя («A user gesture is required…»)
-/// или сразу после выхода по ESC («Pointer lock cannot be acquired immediately after the
-/// user has exited the lock»). Необработанный rejection попадает в обработчик ошибок
-/// Emscripten, который глушит главный цикл — игра зависает и рвётся WebSocket.
-///
-/// Здесь запрос уходит в JS-плагин X1WebGL.jslib, который ловит отказ сам.
-/// Дополнительно соблюдаем паузу после выхода из захвата и на ПК/WebGL вне
-/// пользовательского жеста не дёргаем захват заново.
-/// </summary>
+/// <summary>Requests WebGL pointer lock from a real browser gesture, not a Unity frame.</summary>
 public static class SafeCursor
 {
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")] private static extern int X1WebGL_IsPointerLocked();
-    [DllImport("__Internal")] private static extern int X1WebGL_TryPointerLock();
-    [DllImport("__Internal")] private static extern void X1WebGL_ExitPointerLock();
+    [DllImport("__Internal")] private static extern void X1WebGL_SetPointerLockEnabled(int enabled);
 #endif
-
-    /// <summary>Пауза после выхода из захвата, секунды. Защита от «immediately after the user has exited».</summary>
-    private const float MinTimeBetweenLockRequests = 1.0f;
-
-    /// <summary>Сколько ждать пользовательский жест перед попыткой захвата, секунды.</summary>
-    private const float GestureValidityWindow = 10f;
-
-    private static float _lastExitTime = -999f;
-    private static float _lastLockRequestTime = -999f;
-    private static float _lastGestureTime = -999f;
-
-    private static bool _locked;
-
-    /// <summary>Вызывать из обработчика клика/тапа, чтобы разрешить захват мыши.</summary>
-    public static void NotifyUserGesture()
-    {
-        _lastGestureTime = Time.unscaledTime;
-    }
 
     public static bool IsLocked
     {
@@ -51,61 +18,29 @@ public static class SafeCursor
 #if UNITY_WEBGL && !UNITY_EDITOR
             return X1WebGL_IsPointerLocked() == 1;
 #else
-            return _locked;
+            return Cursor.lockState == CursorLockMode.Locked;
 #endif
         }
     }
 
-    /// <summary>
-    /// Захватить курсор (как CursorLockMode.Locked).
-    /// На WebGL захват реально произойдёт только если был свежий пользовательский жест.
-    /// </summary>
     public static void Lock()
     {
-        if (_locked && IsLocked)
-            return;
-
-        _locked = true;
-
 #if UNITY_WEBGL && !UNITY_EDITOR
-        float now = Time.unscaledTime;
-
-        // Только после жеста пользователя: иначе браузер всё равно откажет,
-        // а лишний необработанный rejection нам не нужен.
-        if (now - _lastGestureTime > GestureValidityWindow)
-            return;
-
-        // Сразу после выхода из захвата повторный запрос браузер запрещает.
-        if (now - _lastExitTime < MinTimeBetweenLockRequests)
-            return;
-
-        if (now - _lastLockRequestTime < MinTimeBetweenLockRequests)
-            return;
-
-        _lastLockRequestTime = now;
-        X1WebGL_TryPointerLock();
-        Cursor.visible = false;
+        if (!X1DeviceDetect.IsMobileDevice())
+            X1WebGL_SetPointerLockEnabled(1);
 #else
         Cursor.lockState = CursorLockMode.Locked;
 #endif
     }
 
-    /// <summary>Освободить курсор (как CursorLockMode.None).</summary>
     public static void Unlock()
     {
-        if (!_locked)
-            return;
-
-        _locked = false;
-        _lastExitTime = Time.unscaledTime;
-
 #if UNITY_WEBGL && !UNITY_EDITOR
-        X1WebGL_ExitPointerLock();
-        Cursor.visible = true;
+        X1WebGL_SetPointerLockEnabled(0);
 #else
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
 #endif
+        Cursor.visible = true;
     }
 
     /// <summary>Установить состояние: true — захватить, false — освободить.</summary>

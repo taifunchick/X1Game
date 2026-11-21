@@ -1,19 +1,6 @@
 using UnityEngine;
 
-/// <summary>
-/// Единое и надёжное определение мобильного устройства для всей игры.
-///
-/// Почему одной проверки мало (что мы уже наступали на эти грабли):
-///  - Application.isMobilePlatform в WebGL ВСЕГДА false, даже на iPhone/Android;
-///  - jslib (MobileDetect.jslib) может попросту НЕ попасть в сборку: если у .jslib сломан
-///    .meta (нет секции PluginImporter с WebGL:enabled:1), Unity плагин не линкует,
-///    DllImport падает с исключением, а старый код молча возвращал false — панель не показывалась;
-///  - userAgent в режиме «Версия для ПК» (Android Chrome) не содержит токенов Android/Mobile,
-///    хотя тач-экран при этом есть и работает;
-///  - Input.touchSupported / InputSystem.Touchscreen отражают ВВОД УСТРОЙСТВА и не зависят от userAgent.
-///
-/// Итог: «мобильное» = сработал ЛЮБОЙ слой. Результат кэшируется (безопасно звать каждый кадр).
-/// </summary>
+/// <summary>Общий детектор для мобильной панели и ввода. В WebGL результат кэшируется.</summary>
 public static class X1DeviceDetect
 {
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -23,7 +10,6 @@ public static class X1DeviceDetect
 
     // -1 = ещё не вычислено, 0 = десктоп, 1 = мобильное
     private static int _webglCache = -1;
-    private static bool? _logged;
 
     /// <summary>true, если игру открыли на мобильном устройстве (телефон/планшет).</summary>
     public static bool IsMobileDevice()
@@ -31,11 +17,11 @@ public static class X1DeviceDetect
 #if UNITY_EDITOR
         return true;
 #else
+        if (Application.platform == RuntimePlatform.WebGLPlayer) return IsWebGLMobileBrowser();
         if (Application.isMobilePlatform) return true;
         if (Application.platform == RuntimePlatform.Android ||
             Application.platform == RuntimePlatform.IPhonePlayer) return true;
         if (SystemInfo.deviceType == DeviceType.Handheld) return true;
-        if (Application.platform == RuntimePlatform.WebGLPlayer) return IsWebGLMobileBrowser();
         return false;
 #endif
     }
@@ -50,8 +36,9 @@ public static class X1DeviceDetect
         bool jsAvailable = false;
         try
         {
-            jsSaysMobile = IsMobileBrowser() == 1;
-            jsAvailable = true;
+            int browserDevice = IsMobileBrowser();
+            jsSaysMobile = browserDevice == 1;
+            jsAvailable = browserDevice >= 0;
         }
         catch (System.Exception e)
         {
@@ -70,19 +57,13 @@ public static class X1DeviceDetect
         try { newTouch = UnityEngine.InputSystem.Touchscreen.current != null; }
         catch (System.Exception e) { Debug.LogWarning("[X1DeviceDetect] InputSystem.Touchscreen недоступен: " + e.Message); }
 
-        // «Точно на телефоне» = любой слой подтвердил тач. js=0 при живом тач-экране случается
-        // (десктопный userAgent / «версия для ПК»), поэтому фолбэки — это полноценные детекторы,
-        // а не декорация на случай падения jslib.
-        bool result = jsSaysMobile || legacyTouch || newTouch;
+        // A touchscreen alone doesn't make a desktop PC a phone. Use Unity's
+        // touch capabilities only if the browser-side classification is unavailable.
+        bool result = jsAvailable ? jsSaysMobile : legacyTouch || newTouch;
         _webglCache = result ? 1 : 0;
 
-        if (!_logged.HasValue)
-        {
-            _logged = true;
-            Debug.Log(string.Format(
-                "[X1DeviceDetect] Итог: мобильное={0} (jslib={1}, jsДоступен={2}, touchSupported={3}, touchscreen={4})",
-                result, jsSaysMobile, jsAvailable, legacyTouch, newTouch));
-        }
+        Debug.Log($"[X1DeviceDetect] mobile={result}, browserDetection={jsAvailable}, " +
+            $"touchSupported={legacyTouch}, touchscreen={newTouch}");
 
         return result;
 #else

@@ -119,7 +119,6 @@ public class ButtonColorSelecter : NetworkBehaviour
     {
         // HideCursor вызывается прямо из обработчика клика по кнопке выбора команды,
         // поэтому здесь уже есть пользовательский жест — захват мыши разрешён.
-        SafeCursor.NotifyUserGesture();
         SafeCursor.Lock();
         SafeCursor.SetInfimaCursorLocked(true);
         SetStarterLookEnabled(true);

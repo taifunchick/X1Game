@@ -1,6 +1,4 @@
 using UnityEngine;
-using Mirror;
-using StarterAssets;
 
 public class MobileMultiTouchSetup : MonoBehaviour
 {
@@ -24,7 +22,7 @@ public class MobileMultiTouchSetup : MonoBehaviour
 
         ApplyPlatformVisibility();
         DisableLookTouchZone(); // ВАЖНО: отключаем старую зону свайпа, чтобы работал MultiTouchMobileInput
-        SetupMultiTouchInput();
+        if (ShouldMobileUIBeActive()) SetupMultiTouchInput();
 
         Debug.Log(string.Format(
             "[MobileMultiTouchSetup] Configuration complete. mobileUI={0}, platform={1}, isMobilePlatform={2}, deviceDetect={3}, joystickCanvas={4}, touchZoneCanvas={5}",

@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 6483554099135143963}
   - component: {fileID: 1557486221260924829}
   - component: {fileID: 1663187150}
-  - component: {fileID: 6950459998490059851}
   m_Layer: 5
   m_Name: UI_Canvas_StarterAssetsInputs_Joysticks
   m_TagString: Untagged
@@ -121,30 +120,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a300d010f57451488aa99000126fbd5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
   starterAssetsInputs: {fileID: 0}
   cameraJoystickSensivity: 1
   forceShowMobileControlsInEditor: 0
   mobileRoot: {fileID: 0}
---- !u!114 &6950459998490059851
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6751388636123340836}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneId: 0
-  _assetId: 804430586
-  serverOnly: 0
-  visibility: 0
-  hasSpawned: 0
 --- !u!1001 &166868853765351469
 PrefabInstance:
   m_ObjectHideFlags: 0

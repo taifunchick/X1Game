@@ -32,10 +32,16 @@ public class LocalPlayerOnly : NetworkBehaviour
         base.OnStartLocalPlayer();
         Apply(true);
         ClaimLocalCamera();
+#if UNITY_WEBGL && !UNITY_EDITOR
+        SafeCursor.Lock();
+#endif
     }
 
     public override void OnStopLocalPlayer()
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        SafeCursor.Unlock();
+#endif
         RestoreSceneCamera();
         Apply(false);
         base.OnStopLocalPlayer();
