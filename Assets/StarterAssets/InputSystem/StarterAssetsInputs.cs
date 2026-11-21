@@ -35,13 +35,13 @@ namespace StarterAssets
         public bool cursorLocked = true;
         public bool cursorInputForLook = true;
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         void Update()
         {
             if (Input.GetMouseButtonDown(1)) // ��� ������� �� ������ ������ ����
             {
                 // Через SafeCursor: в WebGL прямой Cursor.lockState вызывает
                 // requestPointerLock() без жеста пользователя и роняет главный цикл.
-                SafeCursor.NotifyUserGesture();
                 SafeCursor.Lock();
             }
 
@@ -50,6 +50,8 @@ namespace StarterAssets
                 SafeCursor.Unlock();
             }
         }
+
+#endif
 
 #if ENABLE_INPUT_SYSTEM
         public void OnMove(InputValue value)

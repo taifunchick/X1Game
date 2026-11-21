@@ -5,7 +5,7 @@ using InfimaGames.LowPolyShooterPack;
 
 namespace StarterAssets
 {
-    public class UICanvasControllerInput : NetworkBehaviour
+    public class UICanvasControllerInput : MonoBehaviour
     {
         [Header("Output")]
         public StarterAssetsInputs starterAssetsInputs;
@@ -48,12 +48,6 @@ namespace StarterAssets
         private void Start() => ApplyMobileControlsVisibility();
         private void OnEnable() => ApplyMobileControlsVisibility();
 
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-            ApplyMobileControlsVisibility();
-        }
-
         private void ApplyMobileControlsVisibility()
         {
             bool shouldBeActive = ShouldShowMobileControls();
@@ -69,12 +63,6 @@ namespace StarterAssets
 
             if (root.activeSelf != shouldBeActive)
                 root.SetActive(shouldBeActive);
-        }
-
-        public override void OnStartClient()
-        {
-            base.OnStartClient();
-            ResolveLocalPlayer();
         }
 
         private void Update()

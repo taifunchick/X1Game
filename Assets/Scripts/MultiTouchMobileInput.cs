@@ -44,6 +44,12 @@ public class MultiTouchMobileInput : MonoBehaviour
 
     private void Awake()
     {
+        if (!X1DeviceDetect.IsMobileDevice())
+        {
+            enabled = false;
+            return;
+        }
+
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
 

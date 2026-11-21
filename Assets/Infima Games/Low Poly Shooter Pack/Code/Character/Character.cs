@@ -280,8 +280,10 @@ namespace InfimaGames.LowPolyShooterPack
 
 			//Always make sure that our cursor is locked when the game starts!
 			cursorLocked = true;
-			//Update the cursor's state.
+			// WebGL arms pointer lock only after Mirror assigns the local player.
+#if !UNITY_WEBGL || UNITY_EDITOR
 			UpdateCursorState();
+#endif
 
 			#endregion
 
@@ -1384,6 +1386,10 @@ namespace InfimaGames.LowPolyShooterPack
 		
 		public void OnLockCursor(InputAction.CallbackContext context)
 		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+			// Escape releases pointer lock in the browser. Keep the next click armed.
+			if (!X1DeviceDetect.IsMobileDevice()) return;
+#endif
 			//Switch.
 			switch (context)
 			{
@@ -1410,6 +1416,13 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		public void OnLook(InputAction.CallbackContext context)
 		{
+#if UNITY_WEBGL && !UNITY_EDITOR
+			if (context.control?.device is Mouse && !X1DeviceDetect.IsMobileDevice() && !SafeCursor.IsLocked)
+			{
+				axisLook = default;
+				return;
+			}
+#endif
 			//Read.
 			axisLook = cursorLocked ? context.ReadValue<Vector2>() : default;
 
